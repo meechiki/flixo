@@ -225,9 +225,26 @@
                                 <input type="text" id="search-user-id" placeholder="ค้นหา ID เช่น 123-456" maxlength="7" onkeypress="handleSearchKeypress(event)" style="font-size: 15px;">
                                 <button class="btn-primary" onclick="searchUser()" style="border-radius: 100px; padding: 10px 24px;">ค้นหา</button>
                             </div>
+                        <!-- Quick Start Guide -->
+                        <div class="instruction-list" style="background: rgba(56, 189, 248, 0.04); border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-top: 20px;">
+                            <strong style="color: var(--accent, #0284c7); display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 10px;">
+                                <i class="fa-solid fa-rocket"></i> วิธีการเริ่มต้นใช้งาน FLIXO (3 ขั้นตอนง่ายๆ)
+                            </strong>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 12px; line-height: 1.5;">
+                                <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">1.</span> ค้นหา ID คู่สัญญา</strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;">นำ ID อีกฝ่ายมากดค้นหา แล้วเลือกบทบาทผู้ซื้อหรือผู้ขาย</span>
+                                </div>
+                                <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">2.</span> โอนเงินเข้าตัวกลาง</strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;">ผู้ซื้อแสกน QR โอนเงินกักเก็บในระบบ Escrow ปลอดภัย 100%</span>
+                                </div>
+                                <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">3.</span> ส่งมอบ &amp; รับเงิน</strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;">ส่งสินค้าในแชท เมื่อผู้ซื้อกดรับของ ระบบจะโอนเงินให้ผู้ขายทันที</span>
+                                </div>
+                            </div>
                         </div>
-
-
                         <div class="search-result-card" id="search-result-card" style="display: none;">
                             <div class="result-user-info">
                                 <div class="result-avatar"><img id="result-user-avatar" src="" alt="Avatar"></div>
