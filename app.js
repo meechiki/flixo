@@ -278,14 +278,133 @@ function showToast(message, type = 'success') {
 }
 
 
-// ==========================================================================
-// User Authentication (Google Sign-In, Facebook, OTP)
-// ==========================================================================
+/* ==========================================================================
+   i18n MULTI-LANGUAGE SYSTEM (TH / EN)
+   ========================================================================== */
+let currentAppLang = 'th';
+
+const i18nDict = {
+    th: {
+        welcomeHeader: "ยินดีต้อนรับ",
+        welcomeSub: "เข้าสู่ระบบเพื่อใช้งาน Escrow",
+        loginGoogle: "ดำเนินการต่อด้วย Google",
+        loginFacebook: "ดำเนินการต่อด้วย Facebook",
+        or: "หรือ",
+        phonePlaceholder: "เบอร์โทรศัพท์ (เช่น 0891234567)",
+        btnOtp: "รับรหัส OTP",
+        otpLabel: "กรอกรหัสยืนยัน OTP (6 หลัก)",
+        otpSentTo: "ส่งรหัสไปที่",
+        btnVerifyOtp: "ยืนยันรหัส OTP",
+        btnResendOtp: "ส่งรหัสอีกครั้ง",
+        btnChangePhone: "เปลี่ยนเบอร์",
+        pdpaAccept: "ข้าพเจ้ายอมรับ ",
+        pdpaTerms: "ข้อตกลงการใช้งาน (Terms)",
+        pdpaAnd: " และ ",
+        pdpaPolicy: "นโยบายความเป็นส่วนตัว (PDPA)",
+        pdpaOf: " ของ FLIXO",
+        brandSub: "ระบบซื้อขาย C2C ที่ปลอดภัยที่สุด<br>ด้วย Escrow & AI Dispute",
+        featEscrow: "บัญชีตัวกลาง Escrow",
+        featAi: "AI คัดกรองข้อพิพาท",
+        featKyc: "ยืนยันตัวตน e-KYC",
+        navHome: "หน้าหลัก",
+        navChat: "ห้องแชท",
+        toastPdpa: "⚠️ กรุณากดติ๊กยอมรับข้อตกลงและนโยบาย PDPA ก่อนเข้าสู่ระบบ"
+    },
+    en: {
+        welcomeHeader: "Welcome to FLIXO",
+        welcomeSub: "Sign in to access Escrow service",
+        loginGoogle: "Continue with Google",
+        loginFacebook: "Continue with Facebook",
+        or: "OR",
+        phonePlaceholder: "Phone number (e.g. 0891234567)",
+        btnOtp: "Get OTP Code",
+        otpLabel: "Enter 6-digit OTP verification code",
+        otpSentTo: "Code sent to",
+        btnVerifyOtp: "Verify OTP & Sign In",
+        btnResendOtp: "Resend Code",
+        btnChangePhone: "Change Number",
+        pdpaAccept: "I accept FLIXO ",
+        pdpaTerms: "Terms of Service",
+        pdpaAnd: " and ",
+        pdpaPolicy: "Privacy Policy (PDPA)",
+        pdpaOf: "",
+        brandSub: "The most secure C2C trading platform<br>with Escrow & AI Dispute",
+        featEscrow: "Escrow Vault Account",
+        featAi: "AI Dispute Filter",
+        featKyc: "e-KYC Verification",
+        navHome: "Dashboard",
+        navChat: "Chat Rooms",
+        toastPdpa: "⚠️ Please check to accept Terms & Privacy Policy (PDPA) before signing in"
+    }
+};
+
+function setAppLanguage(lang) {
+    currentAppLang = lang;
+    try { localStorage.setItem('flixo_lang', lang); } catch(e) {}
+    
+    const t = i18nDict[lang] || i18nDict.th;
+    
+    // Update active button styles
+    const thBtn = document.getElementById('lang-btn-th');
+    const enBtn = document.getElementById('lang-btn-en');
+    const appTh = document.getElementById('app-lang-th');
+    const appEn = document.getElementById('app-lang-en');
+    
+    if (thBtn && enBtn) {
+        thBtn.style.background = lang === 'th' ? 'var(--accent, #0284c7)' : 'transparent';
+        thBtn.style.color = lang === 'th' ? '#fff' : 'rgba(255, 255, 255, 0.7)';
+        enBtn.style.background = lang === 'en' ? 'var(--accent, #0284c7)' : 'transparent';
+        enBtn.style.color = lang === 'en' ? '#fff' : 'rgba(255, 255, 255, 0.7)';
+    }
+    
+    if (appTh && appEn) {
+        appTh.style.background = lang === 'th' ? 'var(--accent, #0284c7)' : 'transparent';
+        appTh.style.color = lang === 'th' ? '#fff' : 'var(--text-muted)';
+        appEn.style.background = lang === 'en' ? 'var(--accent, #0284c7)' : 'transparent';
+        appEn.style.color = lang === 'en' ? '#fff' : 'var(--text-muted)';
+    }
+
+    // Update Text Elements
+    const setTxt = (id, text, isHtml = false) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (isHtml) el.innerHTML = text;
+            else el.textContent = text;
+        }
+    };
+
+    setTxt('txt-welcome-header', t.welcomeHeader);
+    setTxt('txt-welcome-sub', t.welcomeSub);
+    setTxt('txt-login-google', t.loginGoogle);
+    setTxt('txt-login-facebook', t.loginFacebook);
+    setTxt('txt-or', t.or);
+    setTxt('txt-btn-otp', t.btnOtp);
+    setTxt('txt-otp-label', t.otpLabel);
+    setTxt('txt-otp-sentto', t.otpSentTo);
+    setTxt('txt-verify-btn', t.btnVerifyOtp);
+    setTxt('txt-resend-otp', t.btnResendOtp);
+    setTxt('txt-change-phone', t.btnChangePhone);
+    setTxt('txt-pdpa-accept', t.pdpaAccept);
+    setTxt('txt-pdpa-terms', t.pdpaTerms);
+    setTxt('txt-pdpa-and', t.pdpaAnd);
+    setTxt('txt-pdpa-policy', t.pdpaPolicy);
+    setTxt('txt-pdpa-of', t.pdpaOf);
+    setTxt('txt-brand-sub', t.brandSub, true);
+    setTxt('txt-feat-escrow', t.featEscrow);
+    setTxt('txt-feat-ai', t.featAi);
+    setTxt('txt-feat-kyc', t.featKyc);
+    setTxt('txt-nav-home', t.navHome);
+    setTxt('txt-nav-chat', t.navChat);
+
+    const inputPhone = document.getElementById('login-phone');
+    if (inputPhone) inputPhone.placeholder = t.phonePlaceholder;
+}
 
 function checkPdpaConsentState() {
     const chk = document.getElementById('chk-pdpa-consent');
     if (chk && !chk.checked) {
-        showToast('⚠️ กรุณากดติ๊กยอมรับข้อตกลงและนโยบาย PDPA ก่อนเข้าสู่ระบบ', 'error');
+        const t = i18nDict[currentAppLang] || i18nDict.th;
+        showToast(t.toastPdpa, 'error');
         const box = document.getElementById('pdpa-consent-box');
         if (box) {
             box.style.borderColor = '#ef4444';

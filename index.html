@@ -58,7 +58,7 @@
             <div class="login-brand">
                 <div class="login-logo"><i class="fa-solid fa-shield-halved"></i></div>
                 <h1>FLIXO</h1>
-                <p>ระบบซื้อขาย C2C ที่ปลอดภัยที่สุด<br>ด้วย Escrow &amp; AI Dispute</p>
+                <p id="txt-brand-sub">ระบบซื้อขาย C2C ที่ปลอดภัยที่สุด<br>ด้วย Escrow &amp; AI Dispute</p>
             </div>
             <div class="login-art">
                 <div class="art-circles">
@@ -67,17 +67,23 @@
                     <div class="art-c art-c3"></div>
                 </div>
                 <div class="login-features">
-                    <div class="feat-item"><i class="fa-solid fa-vault"></i><span>บัญชีตัวกลาง Escrow</span></div>
-                    <div class="feat-item"><i class="fa-solid fa-robot"></i><span>AI คัดกรองข้อพิพาท</span></div>
-                    <div class="feat-item"><i class="fa-solid fa-shield-halved"></i><span>ยืนยันตัวตน e-KYC</span></div>
+                    <div class="feat-item"><i class="fa-solid fa-vault"></i><span id="txt-feat-escrow">บัญชีตัวกลาง Escrow</span></div>
+                    <div class="feat-item"><i class="fa-solid fa-robot"></i><span id="txt-feat-ai">AI คัดกรองข้อพิพาท</span></div>
+                    <div class="feat-item"><i class="fa-solid fa-shield-halved"></i><span id="txt-feat-kyc">ยืนยันตัวตน e-KYC</span></div>
                 </div>
             </div>
         </div>
-        <div class="login-right">
+        <div class="login-right" style="position: relative;">
+            <!-- Language Switcher -->
+            <div class="lang-switch-box" style="position: absolute; top: 20px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 8px; border-radius: 20px;">
+                <button type="button" class="lang-btn active" id="lang-btn-th" onclick="setAppLanguage('th')" style="background: var(--accent, #0284c7); color: #fff; border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 3px 10px; border-radius: 14px; transition: 0.2s;">🇹🇭 TH</button>
+                <button type="button" class="lang-btn" id="lang-btn-en" onclick="setAppLanguage('en')" style="background: transparent; color: rgba(255, 255, 255, 0.7); border: none; font-size: 12px; font-weight: 600; cursor: pointer; padding: 3px 10px; border-radius: 14px; transition: 0.2s;">🇬🇧 EN</button>
+            </div>
+
             <div class="login-card">
                 <div class="login-header">
-                    <h2>ยินดีต้อนรับ</h2>
-                    <p>เข้าสู่ระบบเพื่อใช้งาน Escrow</p>
+                    <h2 id="txt-welcome-header">ยินดีต้อนรับ</h2>
+                    <p id="txt-welcome-sub">เข้าสู่ระบบเพื่อใช้งาน Escrow</p>
                 </div>
 
                 <!-- STEP 1: CHOOSE LOGIN METHOD -->
@@ -85,16 +91,16 @@
                     <div class="form-group text-center">
                         <button class="btn-primary btn-block btn-large mt-10 mb-10" id="btn-login-google" onclick="loginWithGoogle()" style="background: white; color: #333; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; gap: 10px;">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" style="width: 24px; height: 24px;">
-                            <span style="font-weight: 500;">ดำเนินการต่อด้วย Google</span>
+                            <span style="font-weight: 500;" id="txt-login-google">ดำเนินการต่อด้วย Google</span>
                         </button>
                         <button class="btn-primary btn-block btn-large mb-20" id="btn-login-facebook" onclick="loginWithFacebook()" style="background: #1877F2; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
                             <i class="fa-brands fa-facebook" style="font-size: 22px;"></i>
-                            <span style="font-weight: 500;">ดำเนินการต่อด้วย Facebook</span>
+                            <span style="font-weight: 500;" id="txt-login-facebook">ดำเนินการต่อด้วย Facebook</span>
                         </button>
                     </div>
 
                     <div class="divider mt-20 mb-20" style="border-top: 1px dashed var(--border); position: relative;">
-                        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--surface); padding: 0 10px; font-size: 12px; color: var(--text-muted);">หรือ</span>
+                        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--surface); padding: 0 10px; font-size: 12px; color: var(--text-muted);" id="txt-or">หรือ</span>
                     </div>
 
                     <div class="form-group">
@@ -107,15 +113,15 @@
                         </div>
                     </div>
                     <button class="btn-primary btn-block btn-large mt-10" id="btn-request-otp" onclick="requestOtp()">
-                        <i class="fa-solid fa-paper-plane"></i> รับรหัส OTP
+                        <i class="fa-solid fa-paper-plane"></i> <span id="txt-btn-otp">รับรหัส OTP</span>
                     </button>
                 </div>
 
                 <!-- STEP 2: OTP VERIFICATION -->
                 <div id="login-step-otp" class="login-step-panel">
                     <div class="form-group text-center">
-                        <label>กรอกรหัสยืนยัน OTP (6 หลัก)</label>
-                        <p class="form-help text-center mb-15">ส่งรหัสไปที่ <span id="otp-phone-display" class="bold" style="color:var(--accent)">089-123-4567</span></p>
+                        <label id="txt-otp-label">กรอกรหัสยืนยัน OTP (6 หลัก)</label>
+                        <p class="form-help text-center mb-15"><span id="txt-otp-sentto">ส่งรหัสไปที่</span> <span id="otp-phone-display" class="bold" style="color:var(--accent)">089-123-4567</span></p>
                         <input type="tel" id="otp-single-input"
                             placeholder="_ _ _ _ _ _" maxlength="6"
                             inputmode="numeric" autocomplete="one-time-code"
@@ -124,11 +130,11 @@
                             onkeypress="if(event.key==='Enter') verifyOtp()">
                     </div>
                     <button class="btn-primary btn-block btn-large mt-20" id="btn-verify-otp" onclick="verifyOtp()">
-                        <i class="fa-solid fa-lock-open"></i> ยืนยันรหัส OTP
+                        <i class="fa-solid fa-lock-open"></i> <span id="txt-verify-btn">ยืนยันรหัส OTP</span>
                     </button>
                     <div class="text-center mt-15">
-                        <button class="btn-secondary btn-sm" onclick="requestOtp()">ส่งรหัสอีกครั้ง</button>
-                        <button class="btn-secondary btn-sm ml-10" onclick="goBackToPhone()">เปลี่ยนเบอร์</button>
+                        <button class="btn-secondary btn-sm" onclick="requestOtp()" id="txt-resend-otp">ส่งรหัสอีกครั้ง</button>
+                        <button class="btn-secondary btn-sm ml-10" onclick="goBackToPhone()" id="txt-change-phone">เปลี่ยนเบอร์</button>
                     </div>
                 </div>
 
@@ -136,11 +142,11 @@
                 <div class="pdpa-login-footer mt-15" style="display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.5; border-top: 1px dashed var(--border); padding: 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.04); border: 1px solid var(--border);" id="pdpa-consent-box">
                     <input type="checkbox" id="chk-pdpa-consent" onchange="toggleLoginButtonsState()" style="width: 20px; height: 20px; accent-color: #0284c7; margin-top: 2px; cursor: pointer; flex-shrink: 0;">
                     <div style="flex-grow: 1; text-align: left;">
-                        <span style="color: var(--text-muted);">ข้าพเจ้ายอมรับ </span>
-                        <button type="button" onclick="openConsentWizard(1)" style="background: none; border: none; padding: 0; color: #0284c7; text-decoration: underline; font-weight: 600; cursor: pointer; font-size: 12px; font-family: inherit;">ข้อตกลงการใช้งาน (Terms)</button>
-                        <span style="color: var(--text-muted);"> และ </span>
-                        <button type="button" onclick="openConsentWizard(2)" style="background: none; border: none; padding: 0; color: #0284c7; text-decoration: underline; font-weight: 600; cursor: pointer; font-size: 12px; font-family: inherit;">นโยบายความเป็นส่วนตัว (PDPA)</button>
-                        <span style="color: var(--text-muted);"> ของ FLIXO</span>
+                        <span style="color: var(--text-muted);" id="txt-pdpa-accept">ข้าพเจ้ายอมรับ </span>
+                        <button type="button" onclick="openConsentWizard(1)" style="background: none; border: none; padding: 0; color: #0284c7; text-decoration: underline; font-weight: 600; cursor: pointer; font-size: 12px; font-family: inherit;" id="txt-pdpa-terms">ข้อตกลงการใช้งาน (Terms)</button>
+                        <span style="color: var(--text-muted);" id="txt-pdpa-and"> และ </span>
+                        <button type="button" onclick="openConsentWizard(2)" style="background: none; border: none; padding: 0; color: #0284c7; text-decoration: underline; font-weight: 600; cursor: pointer; font-size: 12px; font-family: inherit;" id="txt-pdpa-policy">นโยบายความเป็นส่วนตัว (PDPA)</button>
+                        <span style="color: var(--text-muted);" id="txt-pdpa-of"> ของ FLIXO</span>
                     </div>
                 </div>
             </div>
@@ -159,10 +165,10 @@
             </div>
             <nav class="role-nav">
                 <button class="nav-tab active" id="tab-dashboard" onclick="changeAppTab('dashboard')">
-                    <i class="fa-solid fa-house"></i> หน้าหลัก
+                    <i class="fa-solid fa-house"></i> <span id="txt-nav-home">หน้าหลัก</span>
                 </button>
                 <button class="nav-tab" id="tab-deals" onclick="changeAppTab('deals')">
-                    <i class="fa-solid fa-comments"></i> ห้องแชท
+                    <i class="fa-solid fa-comments"></i> <span id="txt-nav-chat">ห้องแชท</span>
                     <span class="badge" id="user-deal-badge">0</span>
                 </button>
                 <button class="nav-tab admin-nav-btn" id="tab-admin" onclick="changeAppTab('admin')" style="display: none;">
@@ -1084,6 +1090,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="app.js?v=63"></script>
+    <script src="app.js?v=64"></script>
 </body>
 </html>
