@@ -314,7 +314,30 @@ const i18nDict = {
         featKyc: "ยืนยันตัวตน e-KYC",
         navHome: "หน้าหลัก",
         navChat: "ห้องแชท",
-        toastPdpa: "⚠️ กรุณากดติ๊กยอมรับข้อตกลงและนโยบาย PDPA ก่อนเข้าสู่ระบบ"
+        toastPdpa: "⚠️ กรุณากดติ๊กยอมรับข้อตกลงและนโยบาย PDPA ก่อนเข้าสู่ระบบ",
+        
+        // Dashboard Translations
+        dashStart: "เริ่มต้นซื้อขาย ID ของคุณคือ",
+        dashSearchBtn: "ค้นหา",
+        searchPlaceholder: "ค้นหา ID เช่น 123-456",
+        guideTitle: "<i class=\"fa-solid fa-rocket\"></i> วิธีการเริ่มต้นใช้งาน FLIXO (3 ขั้นตอนง่ายๆ)",
+        step1Title: "ค้นหา ID คู่สัญญา",
+        step1Desc: "นำ ID อีกฝ่ายมากดค้นหา แล้วเลือกบทบาทผู้ซื้อหรือผู้ขาย",
+        step2Title: "โอนเงินเข้าตัวกลาง",
+        step2Desc: "ผู้ซื้อแสกน QR โอนเงินกักเก็บในระบบ Escrow ปลอดภัย 100%",
+        step3Title: "ส่งมอบ & รับเงิน",
+        step3Desc: "ส่งสินค้าในแชท เมื่อผู้ซื้อกดรับของ ระบบจะโอนเงินให้ผู้ขายทันที",
+        selectRole: "เลือกบทบาทของคุณในดีลนี้:",
+        roleBuyer: "ฉันคือผู้ซื้อ",
+        roleBuyerDesc: "โอนเงินกักเก็บ Escrow",
+        roleSeller: "ฉันคือผู้ขาย",
+        roleSellerDesc: "ส่งใบเสนอราคา",
+        profileInfoHead: "ข้อมูลส่วนตัว",
+        kycUnverified: "ยังไม่ได้ยืนยันตัวตน",
+        btnStartKyc: "เริ่มยืนยันตัวตน e-KYC",
+        editBank: "แก้ไขบัญชี",
+        dealsListTitle: "รายการดีลของคุณ",
+        inputPlaceholder: "พิมพ์ข้อความเจรจา..."
     },
     en: {
         welcomeHeader: "Welcome to FLIXO",
@@ -340,7 +363,30 @@ const i18nDict = {
         featKyc: "e-KYC Verification",
         navHome: "Dashboard",
         navChat: "Chat Rooms",
-        toastPdpa: "⚠️ Please check to accept Terms & Privacy Policy (PDPA) before signing in"
+        toastPdpa: "⚠️ Please check to accept Terms & Privacy Policy (PDPA) before signing in",
+        
+        // Dashboard Translations
+        dashStart: "Trading Portal - Your User ID:",
+        dashSearchBtn: "Search",
+        searchPlaceholder: "Search ID e.g. 123-456",
+        guideTitle: "<i class=\"fa-solid fa-rocket\"></i> How to Get Started with FLIXO (3 Easy Steps)",
+        step1Title: "Search Partner ID",
+        step1Desc: "Enter partner ID to search, then select Buyer or Seller role",
+        step2Title: "Deposit to Escrow",
+        step2Desc: "Buyer scans QR to deposit funds safely into Escrow vault",
+        step3Title: "Deliver & Payout",
+        step3Desc: "Deliver items in chat. Once Buyer confirms, payout is released",
+        selectRole: "Select Your Role for This Deal:",
+        roleBuyer: "I am the Buyer",
+        roleBuyerDesc: "Deposit funds into Escrow",
+        roleSeller: "I am the Seller",
+        roleSellerDesc: "Create price proposal",
+        profileInfoHead: "Profile Information",
+        kycUnverified: "Identity Unverified",
+        btnStartKyc: "Start e-KYC Verification",
+        editBank: "Edit Bank Account",
+        dealsListTitle: "Your Deal List",
+        inputPlaceholder: "Type your message..."
     }
 };
 
@@ -395,8 +441,42 @@ function setAppLanguage(lang) {
     setTxt('txt-nav-home', t.navHome);
     setTxt('txt-nav-chat', t.navChat);
 
+    // Dashboard Elements
+    setTxt('txt-dash-start', t.dashStart);
+    setTxt('txt-dash-search-btn', t.dashSearchBtn);
+    setTxt('txt-guide-title', t.guideTitle, true);
+    setTxt('txt-step1-title', t.step1Title);
+    setTxt('txt-step1-desc', t.step1Desc);
+    setTxt('txt-step2-title', t.step2Title);
+    setTxt('txt-step2-desc', t.step2Desc);
+    setTxt('txt-step3-title', t.step3Title);
+    setTxt('txt-step3-desc', t.step3Desc);
+    setTxt('txt-select-role', t.selectRole);
+    setTxt('txt-role-buyer', t.roleBuyer);
+    setTxt('txt-role-buyer-desc', t.roleBuyerDesc);
+    setTxt('txt-role-seller', t.roleSeller);
+    setTxt('txt-role-seller-desc', t.roleSellerDesc);
+    setTxt('txt-profile-info-head', t.profileInfoHead);
+    setTxt('txt-kyc-unverified', t.kycUnverified);
+    setTxt('txt-btn-start-kyc', t.btnStartKyc);
+    setTxt('txt-edit-bank', t.editBank);
+    setTxt('txt-deals-list-title', t.dealsListTitle);
+
     const inputPhone = document.getElementById('login-phone');
     if (inputPhone) inputPhone.placeholder = t.phonePlaceholder;
+
+    const searchInput = document.getElementById('search-user-id');
+    if (searchInput) searchInput.placeholder = t.searchPlaceholder;
+
+    const chatInput = document.getElementById('active-chat-input');
+    if (chatInput) chatInput.placeholder = t.inputPlaceholder;
+
+    // Trigger UI re-render if user is logged in
+    if (state.loggedInUser) {
+        renderProfileKyc();
+        renderDealsSidebar();
+        renderDealChatWindow();
+    }
 }
 
 function checkPdpaConsentState() {

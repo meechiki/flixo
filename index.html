@@ -233,32 +233,32 @@
                     <div class="welcome-card">
                         <div class="welcome-header" style="text-align: left; display: flex; align-items: center; gap: 12px;">
                             <i class="fa-solid fa-handshake" style="font-size: 24px; color: var(--accent);"></i>
-                            <h2 style="margin: 0; font-size: 16px;">เริ่มต้นซื้อขาย ID ของคุณคือ <span id="user-display-id" class="text-accent2">XXX-XXX</span></h2>
+                            <h2 style="margin: 0; font-size: 16px;"><span id="txt-dash-start">เริ่มต้นซื้อขาย ID ของคุณคือ</span> <span id="user-display-id" class="text-accent2">XXX-XXX</span></h2>
                         </div>
                         <div class="deal-search-box" style="margin-top: 24px;">
                             <div class="search-input-wrapper" style="border-radius: 100px; padding-left: 20px;">
                                 <i class="fa-solid fa-magnifying-glass search-icon" style="font-size: 16px;"></i>
                                 <input type="text" id="search-user-id" placeholder="ค้นหา ID เช่น 123-456" maxlength="7" onkeypress="handleSearchKeypress(event)" style="font-size: 15px;">
-                                <button class="btn-primary" onclick="searchUser()" style="border-radius: 100px; padding: 10px 24px;">ค้นหา</button>
+                                <button class="btn-primary" onclick="searchUser()" style="border-radius: 100px; padding: 10px 24px;" id="txt-dash-search-btn">ค้นหา</button>
                             </div>
                         </div>
                         <!-- Quick Start Guide -->
                         <div class="instruction-list" style="background: rgba(56, 189, 248, 0.04); border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-top: 20px;">
-                            <strong style="color: var(--accent, #0284c7); display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 10px;">
+                            <strong style="color: var(--accent, #0284c7); display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 10px;" id="txt-guide-title">
                                 <i class="fa-solid fa-rocket"></i> วิธีการเริ่มต้นใช้งาน FLIXO (3 ขั้นตอนง่ายๆ)
                             </strong>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 12px; line-height: 1.5;">
                                 <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
-                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">1.</span> ค้นหา ID คู่สัญญา</strong>
-                                    <span style="color: var(--text-muted); font-size: 11.5px;">นำ ID อีกฝ่ายมากดค้นหา แล้วเลือกบทบาทผู้ซื้อหรือผู้ขาย</span>
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">1.</span> <span id="txt-step1-title">ค้นหา ID คู่สัญญา</span></strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;" id="txt-step1-desc">นำ ID อีกฝ่ายมากดค้นหา แล้วเลือกบทบาทผู้ซื้อหรือผู้ขาย</span>
                                 </div>
                                 <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
-                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">2.</span> โอนเงินเข้าตัวกลาง</strong>
-                                    <span style="color: var(--text-muted); font-size: 11.5px;">ผู้ซื้อแสกน QR โอนเงินกักเก็บในระบบ Escrow ปลอดภัย 100%</span>
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">2.</span> <span id="txt-step2-title">โอนเงินเข้าตัวกลาง</span></strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;" id="txt-step2-desc">ผู้ซื้อแสกน QR โอนเงินกักเก็บในระบบ Escrow ปลอดภัย 100%</span>
                                 </div>
                                 <div style="background: var(--surface); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
-                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">3.</span> ส่งมอบ &amp; รับเงิน</strong>
-                                    <span style="color: var(--text-muted); font-size: 11.5px;">ส่งสินค้าในแชท เมื่อผู้ซื้อกดรับของ ระบบจะโอนเงินให้ผู้ขายทันที</span>
+                                    <strong style="color: var(--text-main); display: block; margin-bottom: 2px;"><span style="color: var(--accent, #0284c7);">3.</span> <span id="txt-step3-title">ส่งมอบ &amp; รับเงิน</span></strong>
+                                    <span style="color: var(--text-muted); font-size: 11.5px;" id="txt-step3-desc">ส่งสินค้าในแชท เมื่อผู้ซื้อกดรับของ ระบบจะโอนเงินให้ผู้ขายทันที</span>
                                 </div>
                             </div>
                         </div>
@@ -274,20 +274,20 @@
                                 </div>
                             </div>
                             <div class="deal-role-selector">
-                                <h5>เลือกบทบาทของคุณในดีลนี้:</h5>
+                                <h5 id="txt-select-role">เลือกบทบาทของคุณในดีลนี้:</h5>
                                 <div class="role-button-grid">
                                     <button class="role-btn role-btn-buyer" onclick="initiateDeal('buyer')">
                                         <div class="btn-role-icon"><i class="fa-solid fa-shopping-bag"></i></div>
                                         <div class="btn-role-text">
-                                            <strong>ฉันคือผู้ซื้อ</strong>
-                                            <span>โอนเงินกักเก็บ Escrow</span>
+                                            <strong id="txt-role-buyer">ฉันคือผู้ซื้อ</strong>
+                                            <span id="txt-role-buyer-desc">โอนเงินกักเก็บ Escrow</span>
                                         </div>
                                     </button>
                                     <button class="role-btn role-btn-seller" onclick="initiateDeal('seller')">
                                         <div class="btn-role-icon"><i class="fa-solid fa-store"></i></div>
                                         <div class="btn-role-text">
-                                            <strong>ฉันคือผู้ขาย</strong>
-                                            <span>ส่งใบเสนอราคา</span>
+                                            <strong id="txt-role-seller">ฉันคือผู้ขาย</strong>
+                                            <span id="txt-role-seller-desc">ส่งใบเสนอราคา</span>
                                         </div>
                                     </button>
                                 </div>
@@ -302,20 +302,20 @@
                                 <img id="dashboard-avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=user" alt="Avatar" style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--border); object-fit: cover;">
                             </div>
                             <div class="profile-info-compact" style="flex: 1;">
-                                <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);">ข้อมูลส่วนตัว</h3>
+                                <h3 style="font-size: 18px; margin-bottom: 4px; color: var(--text-main);" id="txt-profile-info-head">ข้อมูลส่วนตัว</h3>
                                 <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;" id="profile-name-display">คุณ xxxxxxx xxxxxxxxx</p>
-                                <div id="dashboard-kyc-status-badge" class="badge badge-outline status-red" style="display: inline-flex;"><i class="fa-solid fa-circle-xmark"></i> ยังไม่ได้ยืนยันตัวตน</div>
+                                <div id="dashboard-kyc-status-badge" class="badge badge-outline status-red" style="display: inline-flex;"><i class="fa-solid fa-circle-xmark"></i> <span id="txt-kyc-unverified">ยังไม่ได้ยืนยันตัวตน</span></div>
                             </div>
                         </div>
                         
                         <div class="profile-actions-compact" style="margin-top: 32px; width: 100%;">
                             <div id="dashboard-bank-info" style="display:none;" class="bank-info-box" style="border-radius: 16px; margin-bottom: 16px;">
                                 <div id="bank-info-display" class="bank-info-detail"></div>
-                                <button class="btn-secondary btn-sm" onclick="document.getElementById('modal-bank-account').style.display='flex';" style="border-radius: 16px;">แก้ไขบัญชี</button>
+                                <button class="btn-secondary btn-sm" onclick="document.getElementById('modal-bank-account').style.display='flex';" style="border-radius: 16px;" id="txt-edit-bank">แก้ไขบัญชี</button>
                             </div>
                             
                             <button class="btn-primary btn-block" id="btn-kyc-dashboard-trigger" onclick="openKycModal('self')" style="border-radius: 16px; padding: 12px;">
-                                <i class="fa-solid fa-id-card"></i> เริ่มยืนยันตัวตน e-KYC
+                                <i class="fa-solid fa-id-card"></i> <span id="txt-btn-start-kyc">เริ่มยืนยันตัวตน e-KYC</span>
                             </button>
                         </div>
                     </div>
@@ -329,7 +329,7 @@
                     <div class="panel-sidebar">
                         <div class="sidebar-section">
                             <div class="sidebar-header-row">
-                                <h4><i class="fa-solid fa-comments"></i> รายการดีลของคุณ</h4>
+                                <h4><i class="fa-solid fa-comments"></i> <span id="txt-deals-list-title">รายการดีลของคุณ</span></h4>
                                 <button class="btn-show-archived" id="btn-show-archived" onclick="toggleShowArchived()" title="ดูดีลที่เก็บแล้ว">
                                     <i class="fa-solid fa-box-archive"></i>
                                 </button>
@@ -1100,6 +1100,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="app.js?v=68"></script>
+    <script src="app.js?v=69"></script>
 </body>
 </html>
