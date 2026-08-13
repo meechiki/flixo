@@ -338,31 +338,24 @@ const i18nDict = {
     }
 };
 
+function toggleAppLanguage() {
+    const nextLang = currentAppLang === 'th' ? 'en' : 'th';
+    setAppLanguage(nextLang);
+}
+
 function setAppLanguage(lang) {
     currentAppLang = lang;
     try { localStorage.setItem('flixo_lang', lang); } catch(e) {}
     
     const t = i18nDict[lang] || i18nDict.th;
     
-    // Update active button styles
-    const thBtn = document.getElementById('lang-btn-th');
-    const enBtn = document.getElementById('lang-btn-en');
-    const appTh = document.getElementById('app-lang-th');
-    const appEn = document.getElementById('app-lang-en');
+    // Update minimal circle button labels
+    const circleLabel = document.getElementById('lang-circle-label');
+    const appCircleLabel = document.getElementById('app-lang-circle-label');
+    const displayLabel = lang.toUpperCase();
     
-    if (thBtn && enBtn) {
-        thBtn.style.background = lang === 'th' ? 'var(--accent, #0284c7)' : 'transparent';
-        thBtn.style.color = lang === 'th' ? '#fff' : 'rgba(255, 255, 255, 0.7)';
-        enBtn.style.background = lang === 'en' ? 'var(--accent, #0284c7)' : 'transparent';
-        enBtn.style.color = lang === 'en' ? '#fff' : 'rgba(255, 255, 255, 0.7)';
-    }
-    
-    if (appTh && appEn) {
-        appTh.style.background = lang === 'th' ? 'var(--accent, #0284c7)' : 'transparent';
-        appTh.style.color = lang === 'th' ? '#fff' : 'var(--text-muted)';
-        appEn.style.background = lang === 'en' ? 'var(--accent, #0284c7)' : 'transparent';
-        appEn.style.color = lang === 'en' ? '#fff' : 'var(--text-muted)';
-    }
+    if (circleLabel) circleLabel.textContent = displayLabel;
+    if (appCircleLabel) appCircleLabel.textContent = displayLabel;
 
     // Update Text Elements
     const setTxt = (id, text, isHtml = false) => {

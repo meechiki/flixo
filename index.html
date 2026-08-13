@@ -74,11 +74,10 @@
             </div>
         </div>
         <div class="login-right" style="position: relative;">
-            <!-- Language Switcher -->
-            <div class="lang-switch-box" style="position: absolute; top: 20px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 8px; border-radius: 20px;">
-                <button type="button" class="lang-btn active" id="lang-btn-th" onclick="setAppLanguage('th')" style="background: var(--accent, #0284c7); color: #fff; border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 3px 10px; border-radius: 14px; transition: 0.2s;">🇹🇭 TH</button>
-                <button type="button" class="lang-btn" id="lang-btn-en" onclick="setAppLanguage('en')" style="background: transparent; color: rgba(255, 255, 255, 0.7); border: none; font-size: 12px; font-weight: 600; cursor: pointer; padding: 3px 10px; border-radius: 14px; transition: 0.2s;">🇬🇧 EN</button>
-            </div>
+            <!-- Minimal Circle Language Switcher -->
+            <button type="button" class="lang-circle-btn" id="lang-toggle-btn" onclick="toggleAppLanguage()" title="Switch Language / เปลี่ยนภาษา" style="position: absolute; top: 20px; right: 24px; z-index: 100; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <span id="lang-circle-label">TH</span>
+            </button>
 
             <div class="login-card">
                 <div class="login-header">
@@ -177,6 +176,9 @@
                 </button>
             </nav>
             <div class="header-profile">
+                <button class="btn-icon" id="app-lang-toggle-btn" onclick="toggleAppLanguage()" title="Switch Language / เปลี่ยนภาษา" style="width: 36px; height: 36px; border-radius: 50%; font-size: 12px; font-weight: 700; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-main); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                    <span id="app-lang-circle-label">TH</span>
+                </button>
                 <button class="btn-icon" id="theme-toggle-btn" onclick="toggleTheme()" title="เปลี่ยนธีม">
                     <i class="fa-solid fa-moon"></i>
                 </button>
@@ -1090,6 +1092,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="app.js?v=64"></script>
+    <script src="app.js?v=65"></script>
 </body>
 </html>
