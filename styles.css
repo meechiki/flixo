@@ -221,6 +221,41 @@ button { cursor: pointer; border: none; transition: var(--transition); font-fami
 }
 .btn-icon:hover { background: var(--surface-2); color: var(--text-main); }
 
+/* ===== MINIMAL CONTROLS (LOGIN PAGE) ===== */
+.theme-circle-btn, .lang-circle-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.theme-circle-btn:hover, .lang-circle-btn:hover {
+    transform: scale(1.08);
+}
+
+/* Light mode override for login page controls */
+body:not(.dark-mode) .theme-circle-btn,
+body:not(.dark-mode) .lang-circle-btn {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12) !important;
+}
+
+body:not(.dark-mode) .theme-circle-btn #login-theme-icon {
+    color: #0f172a !important;
+}
+
+body:not(.dark-mode) .lang-circle-btn #lang-circle-label {
+    color: #0f172a !important;
+}
+
 /* ===== FORMS & INPUTS ===== */
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
