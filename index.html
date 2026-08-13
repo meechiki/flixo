@@ -74,10 +74,18 @@
             </div>
         </div>
         <div class="login-right" style="position: relative;">
-            <!-- Minimal Circle Language Switcher -->
-            <button type="button" class="lang-circle-btn" id="lang-toggle-btn" onclick="toggleAppLanguage()" title="Switch Language / เปลี่ยนภาษา" style="position: absolute; top: 20px; right: 24px; z-index: 100; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <span id="lang-circle-label">TH</span>
-            </button>
+            <!-- Minimal Controls Box (Theme & Language) -->
+            <div style="position: absolute; top: 20px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 10px;">
+                <!-- Theme Toggle Circle Button -->
+                <button type="button" class="theme-circle-btn" id="login-theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode / เปลี่ยนธีม" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    <i class="fa-solid fa-moon" id="login-theme-icon"></i>
+                </button>
+
+                <!-- Minimal Circle Language Switcher -->
+                <button type="button" class="lang-circle-btn" id="lang-toggle-btn" onclick="toggleAppLanguage()" title="Switch Language / เปลี่ยนภาษา" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    <span id="lang-circle-label">TH</span>
+                </button>
+            </div>
 
             <div class="login-card">
                 <div class="login-header">
@@ -1092,6 +1100,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="app.js?v=65"></script>
+    <script src="app.js?v=66"></script>
 </body>
 </html>

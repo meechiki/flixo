@@ -39,22 +39,28 @@ if (typeof firebase !== 'undefined' && firebaseConfig.projectId && firebaseConfi
 }
 
 // Theme handling
+function updateThemeIcons(isDark) {
+    const appIcon = document.querySelector('#theme-toggle-btn i');
+    const loginIcon = document.getElementById('login-theme-icon');
+    const iconClass = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    if (appIcon) appIcon.className = iconClass;
+    if (loginIcon) loginIcon.className = iconClass;
+}
+
 function initTheme() {
     const savedTheme = localStorage.getItem('flixo_theme');
-    if (savedTheme === 'dark') {
+    const isDark = savedTheme === 'dark';
+    if (isDark) {
         document.body.classList.add('dark-mode');
-        const icon = document.querySelector('#theme-toggle-btn i');
-        if (icon) icon.className = 'fa-solid fa-sun';
     }
+    updateThemeIcons(isDark);
 }
+
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('flixo_theme', isDark ? 'dark' : 'light');
-    const icon = document.querySelector('#theme-toggle-btn i');
-    if (icon) {
-        icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-    }
+    updateThemeIcons(isDark);
 }
 initTheme();
 
