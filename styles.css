@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 /* ==========================================================================
    FLIXO – Premium Modern SaaS Theme (Vercel/Linear Inspired)
@@ -37,8 +37,8 @@
     --danger-bg:   rgba(239, 68, 68, 0.1);
 
     /* Layout & Typography */
-    --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Sarabun', sans-serif;
-    --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Sarabun', sans-serif;
+    --font-heading: 'Noto Sans Thai', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body:    'Noto Sans Thai', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     
     --radius-sm:    10px;
     --radius-md:    16px;

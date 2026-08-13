@@ -1660,17 +1660,28 @@ function renderDealChatWindow() {
     if (!activeRoom) {
         inputArea.style.display = 'none';
         detailsPanel.style.display = 'none';
-        chatTitle.innerText = 'เลือกดีลห้องแชทเพื่อตรวจสอบ';
-        chatSubtitle.innerText = '-';
-        badgeContainer.innerHTML = '';
+        const header = document.getElementById('user-chat-header');
+        if (header) header.style.display = 'none';
+        
+        const isEn = currentAppLang === 'en';
         chatMessages.innerHTML = `
-            <div class="empty-state">
-                <i class="fa-solid fa-comments"></i>
-                <p>เลือกดีลห้องแชทกลางด้านซ้าย เพื่อตรวจสอบและแชทเจรจาซื้อขายกักเก็บเงิน</p>
+            <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 420px; padding: 40px 24px; text-align: center;">
+                <div style="width: 84px; height: 84px; border-radius: 50%; background: rgba(56, 189, 248, 0.08); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 36px; color: #0284c7; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                    <i class="fa-solid fa-comments"></i>
+                </div>
+                <h3 style="font-size: 18px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                    ${isEn ? 'Select a Deal to Start Chatting' : 'เลือกดีลเพื่อเริ่มต้นเจรจาซื้อขาย'}
+                </h3>
+                <p style="font-size: 13.5px; color: var(--text-muted); max-width: 400px; line-height: 1.6; margin: 0;">
+                    ${isEn ? 'Click on a deal from the left menu to view proposals, send items, and negotiate safely with FLIXO Escrow.' : 'คลิกเลือกรายการดีลจากเมนูด้านซ้าย เพื่อดูรายละเอียดข้อเสนอ และสนทนาเจรจาผ่านระบบตัวกลาง FLIXO Escrow ปลอดภัย 100%'}
+                </p>
             </div>
         `;
         return;
     }
+    
+    const header = document.getElementById('user-chat-header');
+    if (header) header.style.display = 'flex';
     
     inputArea.style.display = 'flex';
     detailsPanel.style.display = 'block';
