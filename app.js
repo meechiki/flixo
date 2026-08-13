@@ -1432,15 +1432,20 @@ function renderDealsSidebar() {
         return bPinned - aPinned;
     });
     
-    // Archive button highlight
-    const archiveBtn = document.getElementById('btn-show-archived');
-    if (archiveBtn) archiveBtn.style.color = state.showArchived ? '#f97316' : '';
-    
-    const nonArchived = state.rooms.filter(r => !state.archivedRooms.includes(r.id)).length;
-    badgeCount.innerText = nonArchived;
-    badgeCount.style.display = nonArchived > 0 ? 'block' : 'none';
-    
     const isEn = currentAppLang === 'en';
+    
+    // Archive button highlight & label
+    const archiveBtn = document.getElementById('btn-show-archived');
+    const archiveLabel = document.getElementById('txt-btn-archive-label');
+    if (archiveBtn) {
+        if (state.showArchived) {
+            archiveBtn.classList.add('active');
+            if (archiveLabel) archiveLabel.textContent = isEn ? 'Active Deals' : 'ดีลปัจจุบัน';
+        } else {
+            archiveBtn.classList.remove('active');
+            if (archiveLabel) archiveLabel.textContent = isEn ? 'Archived' : 'คลังดีล';
+        }
+    }
     
     if (visibleRooms.length === 0) {
         const emptyMsg = state.showArchived 

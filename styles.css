@@ -565,6 +565,48 @@ body.dark-mode .app-header { background: rgba(15, 23, 42, 0.75); }
 .sidebar-section { padding: 0; }
 .sidebar-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 4px; }
 .sidebar-header-row h4 { font-size: 15px; font-weight: 600; }
+
+/* ===== MINIMAL ARCHIVE VAULT SWITCHER BUTTON ===== */
+.btn-show-archived {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    outline: none;
+}
+
+.btn-show-archived:hover {
+    background: var(--surface-3);
+    color: var(--text-main);
+    border-color: var(--border-focus);
+    transform: translateY(-1px);
+}
+
+.btn-show-archived.active {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.4);
+    color: #f97316;
+}
+
+body:not(.dark-mode) .btn-show-archived {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+body:not(.dark-mode) .btn-show-archived:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
 .chat-list { display: flex; flex-direction: column; gap: 12px; }
 .chat-item {
     background: var(--surface); border-radius: var(--radius-md);
