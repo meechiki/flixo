@@ -1360,52 +1360,54 @@ function renderProfileKyc() {
         dashboardAvatar.src = state.loggedInUser.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user';
     }
     
+    const isEn = currentAppLang === 'en';
+    
     if (state.loggedInUser.kycStatus === 'verified') {
         if(kycBadge) {
             kycBadge.className = 'badge badge-outline status-green';
-            kycBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> ยืนยัน e-KYC แล้ว';
+            kycBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${isEn ? 'e-KYC Verified' : 'ยืนยัน e-KYC แล้ว'}`;
         }
         if(dashboardKycBox) {
             dashboardKycBox.className = 'profile-kyc-status-text text-center mt-10 verified status-green';
-            dashboardKycBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> ยืนยันตัวตนสำเร็จแล้ว (มีสิทธิ์ทำสัญญาในระบบ)';
+            dashboardKycBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${isEn ? 'Identity Verified (Access granted)' : 'ยืนยันตัวตนสำเร็จแล้ว (มีสิทธิ์ทำสัญญาในระบบ)'}`;
         }
         if(dashboardKycBadge) {
             dashboardKycBadge.className = 'badge badge-outline status-green';
-            dashboardKycBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> ยืนยัน e-KYC แล้ว';
+            dashboardKycBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${isEn ? 'e-KYC Verified' : 'ยืนยัน e-KYC แล้ว'}`;
         }
         if(dashboardKycBtn) dashboardKycBtn.style.display = 'none';
     } else if (state.loggedInUser.kycStatus === 'pending') {
         if(kycBadge) {
             kycBadge.className = 'badge badge-outline text-warning';
-            kycBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> รอดำเนินการ';
+            kycBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${isEn ? 'Pending Review' : 'รอดำเนินการ'}`;
         }
         if(dashboardKycBox) {
             dashboardKycBox.className = 'profile-kyc-status-text text-center mt-10 text-warning';
-            dashboardKycBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> เอกสารกำลังรอตรวจสอบโดยผู้ดูแลระบบ';
+            dashboardKycBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${isEn ? 'Documents under admin review' : 'เอกสารกำลังรอตรวจสอบโดยผู้ดูแลระบบ'}`;
         }
         if(dashboardKycBtn) dashboardKycBtn.style.display = 'none';
     } else if (state.loggedInUser.kycStatus === 'failed') {
         if(kycBadge) {
             kycBadge.className = 'badge badge-outline status-red';
-            kycBadge.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ยื่นตรวจไม่ผ่าน';
+            kycBadge.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${isEn ? 'Verification Failed' : 'ยื่นตรวจไม่ผ่าน'}`;
         }
         if(dashboardKycBox) {
             dashboardKycBox.className = 'profile-kyc-status-text text-center mt-10 status-red';
-            dashboardKycBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ตรวจสอบล้มเหลว กรุณายื่นเอกสารอีกครั้ง';
+            dashboardKycBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${isEn ? 'Verification failed, please resubmit' : 'ตรวจสอบล้มเหลว กรุณายื่นเอกสารอีกครั้ง'}`;
         }
         if(dashboardKycBtn) dashboardKycBtn.style.display = 'block';
     } else {
         if(kycBadge) {
             kycBadge.className = 'badge badge-outline';
-            kycBadge.innerHTML = '<i class="fa-solid fa-circle-xmark status-red"></i> ยังไม่ได้ยืนยัน e-KYC';
+            kycBadge.innerHTML = `<i class="fa-solid fa-circle-xmark status-red"></i> ${isEn ? 'Unverified e-KYC' : 'ยังไม่ได้ยืนยัน e-KYC'}`;
         }
         if(dashboardKycBox) {
             dashboardKycBox.className = 'profile-kyc-status-text text-center mt-10';
-            dashboardKycBox.innerHTML = 'ยังไม่ได้ยืนยันตัวตน';
+            dashboardKycBox.innerHTML = isEn ? 'Identity Unverified' : 'ยังไม่ได้ยืนยันตัวตน';
         }
         if(dashboardKycBadge) {
             dashboardKycBadge.className = 'badge badge-outline status-red';
-            dashboardKycBadge.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ยังไม่ได้ยืนยันตัวตน';
+            dashboardKycBadge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${isEn ? 'Identity Unverified' : 'ยังไม่ได้ยืนยันตัวตน'}`;
         }
         if(dashboardKycBtn) dashboardKycBtn.style.display = 'block';
     }
@@ -1438,8 +1440,13 @@ function renderDealsSidebar() {
     badgeCount.innerText = nonArchived;
     badgeCount.style.display = nonArchived > 0 ? 'block' : 'none';
     
+    const isEn = currentAppLang === 'en';
+    
     if (visibleRooms.length === 0) {
-        listDiv.innerHTML = `<div class="text-center text-muted p-10 font-12">${state.showArchived ? 'ไม่มีดีลที่เก็บไว้' : 'ไม่มีดีลซื้อขายที่กำลังดำเนินการ'}</div>`;
+        const emptyMsg = state.showArchived 
+            ? (isEn ? 'No archived deals' : 'ไม่มีดีลที่เก็บไว้')
+            : (isEn ? 'No active trading deals' : 'ไม่มีดีลซื้อขายที่กำลังดำเนินการ');
+        listDiv.innerHTML = `<div class="text-center text-muted p-10 font-12">${emptyMsg}</div>`;
         return;
     }
     
@@ -1451,31 +1458,33 @@ function renderDealsSidebar() {
         const isArchived = state.archivedRooms.includes(room.id);
         
         let statusBadge = '';
-        if (room.escrowStatus === 'held') statusBadge = '<span class="chat-item-badge held">กักเก็บเงิน</span>';
-        else if (room.escrowStatus === 'released') statusBadge = '<span class="chat-item-badge released">โอนเงินแล้ว</span>';
-        else if (room.escrowStatus === 'suspended') statusBadge = '<span class="chat-item-badge suspended">ระงับดีล</span>';
+        if (room.escrowStatus === 'held') statusBadge = `<span class="chat-item-badge held">${isEn ? 'Funds Held' : 'กักเก็บเงิน'}</span>`;
+        else if (room.escrowStatus === 'released') statusBadge = `<span class="chat-item-badge released">${isEn ? 'Funds Payout' : 'โอนเงินแล้ว'}</span>`;
+        else if (room.escrowStatus === 'suspended') statusBadge = `<span class="chat-item-badge suspended">${isEn ? 'Suspended' : 'ระงับดีล'}</span>`;
         
         const isActive = state.activeRoomId === room.id ? 'active' : '';
-        const roleText = isBuyer ? 'ผู้ซื้อ' : 'ผู้ขาย';
+        const roleText = isBuyer ? (isEn ? 'Buyer' : 'ผู้ซื้อ') : (isEn ? 'Seller' : 'ผู้ขาย');
         const partnerId = isBuyer ? room.sellerId : room.buyerId;
         const pinIcon = isPinned ? '<i class="fa-solid fa-thumbtack pin-icon" title="ปักหมุดอยู่"></i>' : '';
         const customNickname = getPartnerNickname(room.id, partnerId);
         
         const titleText = customNickname 
             ? `<span style="color:var(--primary); font-weight:700;">✏️ ${customNickname}</span> <span style="font-size:11px; opacity:0.75;">(${roleText})</span>`
-            : `ID ${partnerId || 'Unknown'} ${roleText}`;
+            : `ID ${partnerId || 'Unknown'} (${roleText})`;
+        
+        const previewText = isEn ? '(Click to enter deal room)' : '(คลิกเพื่อเข้าห้องเจรจาสัญญาซื้อขาย)';
         
         html += `
             <div class="chat-item ${isActive}" id="chat-item-${room.id}" onclick="selectRoom('${room.id}')">
                 <div class="chat-item-header">
                     <span class="chat-item-title">${pinIcon}${titleText}</span>
                     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="event.stopPropagation()">
-                        <button class="btn-deal-menu" onclick="openDealMenu(event,'${room.id}')" title="ตัวเลือก">
+                        <button class="btn-deal-menu" onclick="openDealMenu(event,'${room.id}')" title="Option">
                             <i class="fa-solid fa-ellipsis"></i>
                         </button>
                     </div>
                 </div>
-                <div class="chat-item-preview">(คลิกเพื่อเข้าห้องเจรจาสัญญาซื้อขาย)</div>
+                <div class="chat-item-preview">${previewText}</div>
             </div>
         `;
     });
