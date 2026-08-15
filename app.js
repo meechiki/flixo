@@ -144,8 +144,13 @@ let activeUnsubscribers = {
     rooms: null,
     messages: null,
     kyc: null,
-    disputes: null
+    disputes: null,
+    session: null
 };
+
+function generateSessionId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
 
 // Initial Setup
 window.addEventListener('DOMContentLoaded', () => {
@@ -161,7 +166,11 @@ window.addEventListener('DOMContentLoaded', () => {
             handleUserSessionInit(data.identifier, data.displayName, data.photoURL);
         } else if (isFirebaseEnabled && typeof auth !== 'undefined' && auth) {
             auth.onAuthStateChanged(user => {
-                if (user) {
+                // Anonymous sessions (used purely to satisfy Firestore auth,
+                // e.g. after the simulated-OTP login fallback) have no email
+                // or phone and must never be treated as a real identity here
+                // - doing so raced with the real login and hijacked it.
+                if (user && !user.isAnonymous && (user.email || user.phoneNumber)) {
                     handleUserSessionInit(user.email || user.phoneNumber, user.displayName, user.photoURL);
                 }
             });
@@ -885,44 +894,73 @@ function enterMainApp(user) {
     
     // Switch view
     changeAppTab('dashboard');
-    
+
     // Initialize Real-time Database Listeners if available
     initRealtimeListeners();
-    
+
+    // Single-session-per-account enforcement: claim this login as the active
+    // session, then (only once that claim is committed) watch for another
+    // device overwriting it. Attaching the listener before the write commits
+    // would see the previous session's id on the first snapshot and
+    // immediately kick this brand-new login out.
+    if (isFirebaseEnabled && db) {
+        state.mySessionId = generateSessionId();
+        db.collection('users').doc(user.id).update({ activeSessionId: state.mySessionId })
+            .catch(() => {})
+            .then(() => {
+                activeUnsubscribers.session = db.collection('users').doc(user.id).onSnapshot(docSnap => {
+                    const data = docSnap.data();
+                    if (data && data.activeSessionId && state.mySessionId && data.activeSessionId !== state.mySessionId) {
+                        forceLogoutOtherSession();
+                    }
+                });
+            });
+    }
+
     updateViews();
-    
+
     // Show smooth toast instead of disruptive alert
     showToast(`✓ เข้าสู่ระบบสำเร็จ! ID: ${user.id}`, 'success');
+}
+
+function resetSessionState() {
+    unsubscribeAllListeners();
+    state.mySessionId = null;
+    state.loggedInUser = null;
+    state.loginStep = 'phone';
+    state.rooms = [];
+    state.activeRoomId = null;
+    state.searchQuery = '';
+    state.searchResult = null;
+    state.archivedRooms = [];
+    state.pinnedRooms = [];
+    state.closedRooms = [];
+    state.deletedRooms = [];
+
+    document.getElementById('login-phone').value = '';
+    const otpInput = document.getElementById('otp-single-input');
+    if (otpInput) otpInput.value = '';
+
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('login-container').style.display = 'flex';
+    document.getElementById('login-step-otp').classList.remove('active');
+    document.getElementById('login-step-phone').classList.add('active');
+    closeSmsNotification();
 }
 
 function logout() {
     if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
         try { localStorage.removeItem('flixo_saved_session'); } catch(e) {}
         if (typeof auth !== 'undefined' && auth) auth.signOut();
-        
-        unsubscribeAllListeners();
-        
-        state.loggedInUser = null;
-        state.loginStep = 'phone';
-        state.rooms = [];
-        state.activeRoomId = null;
-        state.searchQuery = '';
-        state.searchResult = null;
-        state.archivedRooms = [];
-        state.pinnedRooms = [];
-        state.closedRooms = [];
-        state.deletedRooms = [];
-        
-        document.getElementById('login-phone').value = '';
-        const otpInput = document.getElementById('otp-single-input');
-        if (otpInput) otpInput.value = '';
-        
-        document.getElementById('app-container').style.display = 'none';
-        document.getElementById('login-container').style.display = 'flex';
-        document.getElementById('login-step-otp').classList.remove('active');
-        document.getElementById('login-step-phone').classList.add('active');
-        closeSmsNotification();
+        resetSessionState();
     }
+}
+
+function forceLogoutOtherSession() {
+    try { localStorage.removeItem('flixo_saved_session'); } catch(e) {}
+    if (typeof auth !== 'undefined' && auth) auth.signOut();
+    resetSessionState();
+    alert('บัญชีของคุณถูกเข้าสู่ระบบจากอุปกรณ์/เบราว์เซอร์อื่น ระบบอนุญาตให้ใช้งานได้ครั้งละ 1 อุปกรณ์เท่านั้น กรุณาเข้าสู่ระบบใหม่หากต้องการใช้งานที่นี่');
 }
 
 function formatPhoneNumber(num) {
@@ -954,16 +992,18 @@ function initRealtimeListeners() {
                 roomsList.push(data);
             });
             state.rooms = roomsList;
-            
+
             // Auto-select room if none is currently selected and rooms exist
             if (!state.activeRoomId && roomsList.length > 0) {
                 state.activeRoomId = roomsList[0].id;
             }
-            
+
             // Re-render sidebar, active chat details & admin panel
             renderDealsSidebar();
             renderDealChatWindow();
             if (isAdmin) renderAdminPanel();
+
+            checkAutoReleaseEscrow(roomsList);
         }, err => {
             console.error("Rooms listener error:", err);
         });
@@ -992,6 +1032,8 @@ function initRealtimeListeners() {
                 });
                 state.disputes = list;
                 renderAdminPanel();
+
+                cleanupOldDisputes(list);
             });
     } catch(e) {
         console.warn("initRealtimeListeners error caught safely:", e);
@@ -1005,6 +1047,47 @@ function unsubscribeAllListeners() {
             activeUnsubscribers[key] = null;
         }
     }
+}
+
+// Spec 1.3.1.6: if the buyer never confirms receipt, release funds to the
+// seller automatically 4 days after the tracking number was submitted.
+// There is no backend/scheduled job in this static app, so this runs
+// opportunistically whenever any party's client (buyer, seller, or admin)
+// receives a fresh rooms snapshot.
+const AUTO_RELEASE_MS = 4 * 24 * 60 * 60 * 1000;
+function checkAutoReleaseEscrow(rooms) {
+    if (!isFirebaseEnabled || !db) return;
+    rooms.forEach(room => {
+        if (room.escrowStatus === 'held' && room.trackingSubmittedAt && (Date.now() - room.trackingSubmittedAt) > AUTO_RELEASE_MS) {
+            db.collection('rooms').doc(room.id).update({
+                escrowStatus: 'released',
+                status: 'closed',
+                escrowMoneyState: 'ระบบปล่อยเงินอัตโนมัติ (ผู้ซื้อไม่ยืนยันภายใน 4 วันหลังแจ้งจัดส่ง)'
+            }).then(() => {
+                db.collection('rooms').doc(room.id).collection('messages').add({
+                    sender: 'system',
+                    text: `🔒 [ระบบตัวกลาง]: ครบกำหนด 4 วันหลังแจ้งจัดส่งพัสดุโดยไม่มีการยืนยันรับสินค้า ระบบปล่อยเงิน ฿${(room.escrowAmount || 0).toLocaleString()} ให้ผู้ขายโดยอัตโนมัติ และปิดห้องแชทถาวร`,
+                    timestamp: getFormattedTime(),
+                    clientTimestamp: Date.now(),
+                    serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    isSystem: true,
+                    escrowState: 'released'
+                });
+            }).catch(err => console.warn('Auto-release failed:', err));
+        }
+    });
+}
+
+// Spec 1.3.5.3: dispute records are purged 90 days after they were resolved.
+const DISPUTE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+function cleanupOldDisputes(disputes) {
+    if (!isFirebaseEnabled || !db) return;
+    disputes.forEach(d => {
+        const isResolved = d.status === 'resolved_refunded' || d.status === 'resolved_released';
+        if (isResolved && d.resolvedAt && (Date.now() - d.resolvedAt) > DISPUTE_RETENTION_MS) {
+            db.collection('disputes').doc(d.id).delete().catch(err => console.warn('Dispute cleanup failed:', err));
+        }
+    });
 }
 
 // Setup real-time listener for current chat room messages (using clientTimestamp to prevent local null timestamp bugs)
@@ -3310,7 +3393,8 @@ function adminResolveDispute(disputeId, verdict) {
     if (confirm('ยืนยันคำตัดสินการจ่ายเงินนี้หรือไม่?')) {
         if (isFirebaseEnabled) {
             db.collection('disputes').doc(disputeId).update({
-                status: verdict === 'refund' ? 'resolved_refunded' : 'resolved_released'
+                status: verdict === 'refund' ? 'resolved_refunded' : 'resolved_released',
+                resolvedAt: Date.now()
             });
             db.collection('rooms').doc(ticket.roomId).update({
                 escrowStatus: 'released',
@@ -3495,7 +3579,7 @@ function submitTrackingNumber() {
     activeRoom.trackingCarrier = carrier;
     if (isFirebaseEnabled && db) {
         db.collection('rooms').doc(activeRoom.id).collection('messages').add({ ...trackMsg, serverTimestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        db.collection('rooms').doc(activeRoom.id).update({ trackingNumber: number, trackingCarrier: carrier });
+        db.collection('rooms').doc(activeRoom.id).update({ trackingNumber: number, trackingCarrier: carrier, trackingSubmittedAt: Date.now() });
     } else {
         activeRoom.messages.push(trackMsg);
         state.activeRoomMessages = activeRoom.messages;
