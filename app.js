@@ -3,8 +3,9 @@
  * Interactive Simulator Application Logic (v6 - Full Customizations)
  */
 
-// Paste your Typhoon API Key here:
-const TYPHOON_API_KEY = "sk-7Z2baWyqhbFJzcxRQBp6ug9ZaBniaSqLrI9hBszFtl5MF1vG";
+// Typhoon API Key is loaded from config.js (git-ignored, never committed).
+// See config.example.js for the template.
+const TYPHOON_API_KEY = window.FLIXO_TYPHOON_API_KEY || "";
 
 // Paste your Firebase Credentials here:
 const firebaseConfig = {
@@ -621,9 +622,17 @@ function handleUserSessionInit(identifier, displayName, photoURL) {
     const cleanId = identifier.toLowerCase();
     const isEmail = cleanId.includes('@');
     const searchField = isEmail ? 'email' : 'phone';
-    
+
     if (isFirebaseEnabled && db) {
-        db.collection('users').where(searchField, '==', cleanId).get()
+        // Phone-OTP logins (real or simulated-fallback) and the admin bypass never call a
+        // Firebase Auth sign-in method, so auth.currentUser is null and Firestore rejects
+        // every read/write with permission-denied. Sign in anonymously first so this path
+        // still carries a real auth session, same as the Google/Facebook popup logins do.
+        const ensureAuth = (auth && !auth.currentUser)
+            ? auth.signInAnonymously().catch(err => console.warn("Anonymous auth failed:", err))
+            : Promise.resolve();
+
+        ensureAuth.then(() => db.collection('users').where(searchField, '==', cleanId).get())
             .then(querySnapshot => {
                 let user;
                 if (querySnapshot.empty) {
@@ -639,7 +648,7 @@ function handleUserSessionInit(identifier, displayName, photoURL) {
                         const part1 = Math.floor(100 + Math.random() * 900).toString();
                         const part2 = Math.floor(100 + Math.random() * 900).toString();
                         const id = `${part1}-${part2}`;
-                        
+
                         user = {
                             id: id,
                             name: displayName || `User ${id}`,
@@ -648,10 +657,10 @@ function handleUserSessionInit(identifier, displayName, photoURL) {
                             avatar: photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`
                         };
                     }
-                    
+
                     db.collection('users').doc(user.id).set(user, { merge: true })
                         .then(() => { enterMainApp(user); })
-                        .catch(() => { enterMainApp(user); });
+                        .catch(err => { console.warn("Failed to persist user profile:", err); enterMainApp(user); });
                 } else {
                     user = querySnapshot.docs[0].data();
                     if (cleanId === 'tawannatv@gmail.com' || cleanId === '0830158022' || cleanId === '0831058022') {
@@ -2826,7 +2835,7 @@ ${chatHistoryStr ? chatHistoryStr : '(ไม่มีประวัติกา
                 'Authorization': `Bearer ${TYPHOON_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'typhoon-v1.5x-70b-instruct',
+                model: 'typhoon-v2.5-30b-a3b-instruct',
                 messages: [
                     { role: 'system', content: 'You are a JSON-only API that outputs valid JSON without markdown wrapping.' },
                     { role: 'user', content: prompt }
@@ -3702,10 +3711,10 @@ async function checkMessageFilter(text) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer sk-7Z2baWyqhbFJzcxRQBp6ug9ZaBniaSqLrI9hBszFtl5MF1vG'
+                'Authorization': `Bearer ${TYPHOON_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'typhoon-v1.5x-70b-instruct',
+                model: 'typhoon-v2.5-30b-a3b-instruct',
                 messages: [
                     {
                         role: 'system',
