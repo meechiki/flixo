@@ -1,3 +1,4 @@
+<!-- redeploy trigger -->
 # FLIXO: C2C Escrow Marketplace & AI Dispute
 ## แพลตฟอร์มซื้อขายออนไลน์ระบบ Escrow และการตรวจสอบด้วยปัญญาประดิษฐ์ (เว็บต้นแบบ)
 
