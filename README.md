@@ -49,7 +49,3 @@ c2c-escrow-prototype/
 ├── deploy.bat        # สคริปต์สั้นสำหรับ Push ขึ้น GitHub Pages สะดวกต่อการทดสอบ
 └── README.md         # เอกสารแนะนำโครงการนี้
 ```
-
----
-
-## สามารถทดลองใช้งานผ่าน Github Links
