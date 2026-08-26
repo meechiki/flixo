@@ -7,6 +7,18 @@
 // See config.example.js for the template.
 const TYPHOON_API_KEY = window.FLIXO_TYPHOON_API_KEY || "";
 
+// Escapes user-supplied text before it is interpolated into innerHTML, to prevent stored XSS
+// via chat messages / product proposals (e.g. <img onerror=...> in a message or product name).
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Paste your Firebase Credentials here:
 const firebaseConfig = {
   apiKey: "AIzaSyDQSm4FPvRiRdDLk6l6VvyOwvsbrOUefSQ",
@@ -1896,7 +1908,7 @@ function renderDealChatWindow() {
     const isCompleted = activeRoom.escrowStatus === 'released' || activeRoom.status === 'closed' || state.closedRooms.includes(activeRoom.id);
     const bellBtn = document.getElementById('btn-bell-notify');
     const chatInput = document.getElementById('active-chat-input');
-    const chatImgInput = document.getElementById('chat-img-file');
+    const chatImgInput = document.getElementById('chat-img-file-input');
     
     if (isCompleted) {
         if (chatInput) { 
@@ -2060,7 +2072,7 @@ function renderActiveChatMessagesUI() {
                 <div class="msg-system">
                     <div class="system-alert ${classType}">
                         <i class="fa-solid fa-circle-info"></i>
-                        <span>${msg.text}</span>
+                        <span>${escapeHtml(msg.text)}</span>
                     </div>
                 </div>
             `;
@@ -2127,8 +2139,8 @@ function renderActiveChatMessagesUI() {
                         <div class="proposal-item-box">
                             <div class="proposal-img">${imgChar}</div>
                             <div class="proposal-info">
-                                <h4>${prop.name}</h4>
-                                <p>${prop.desc}</p>
+                                <h4>${escapeHtml(prop.name)}</h4>
+                                <p>${escapeHtml(prop.desc)}</p>
                                 <div class="proposal-price-tag">฿${prop.price.toLocaleString()}</div>
                             </div>
                         </div>
@@ -2147,7 +2159,7 @@ function renderActiveChatMessagesUI() {
                     <img src="${imgSrc}" alt="รูปภาพในแชท" class="chat-msg-img" onclick="openFullImageModal('${imgSrc}')" />
                 </div>
             ` : '';
-            const textHtml = msg.text ? `<p style="margin: 0; word-break: break-word;">${msg.text}</p>` : '';
+            const textHtml = msg.text ? `<p style="margin: 0; word-break: break-word;">${escapeHtml(msg.text)}</p>` : '';
             
             messagesHtml += `
                 <div class="msg-row ${isSelf ? 'buyer' : 'seller'}">
@@ -3389,7 +3401,12 @@ function renderAdminInvestigatorCard() {
 function adminResolveDispute(disputeId, verdict) {
     const ticket = state.disputes.find(d => d.id === disputeId);
     if (!ticket) return;
-    
+
+    if (ticket.status === 'resolved_refunded' || ticket.status === 'resolved_released') {
+        showToast('❌ ข้อพิพาทนี้ถูกตัดสินไปแล้ว ไม่สามารถตัดสินซ้ำได้', 'error');
+        return;
+    }
+
     if (confirm('ยืนยันคำตัดสินการจ่ายเงินนี้หรือไม่?')) {
         if (isFirebaseEnabled) {
             db.collection('disputes').doc(disputeId).update({
@@ -3525,12 +3542,12 @@ function showProposalDetail(propJson) {
             : `<div style="font-size:72px;text-align:center;padding:20px;">${getCategoryEmoji(prop.category)}</div>`;
         document.getElementById('modal-product-detail-body').innerHTML = `
             <div>${imgHtml}</div>
-            <h3 style="margin-bottom:8px;font-size:18px;">${prop.name}</h3>
+            <h3 style="margin-bottom:8px;font-size:18px;">${escapeHtml(prop.name)}</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;">
                 <span style="padding:4px 10px;border-radius:20px;background:var(--surface-2,#f0f4f8);font-size:12px;">${catLabel}</span>
                 <span style="padding:4px 12px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-main);font-size:13px;font-weight:700;">฿${Number(prop.price).toLocaleString()}</span>
             </div>
-            <p style="white-space:pre-wrap;line-height:1.8;color:var(--text-muted);font-size:14px;">${prop.desc || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+            <p style="white-space:pre-wrap;line-height:1.8;color:var(--text-muted);font-size:14px;">${prop.desc ? escapeHtml(prop.desc) : 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
         `;
         document.getElementById('modal-product-detail').style.display = 'flex';
     } catch(e) { console.error(e); }
@@ -3690,6 +3707,13 @@ function resizeBase64ImageFromFile(file, callback) {
 
 function deleteRoom(roomId) {
     document.querySelectorAll('.deal-context-menu').forEach(m => m.remove());
+
+    const room = state.rooms.find(r => r.id === roomId);
+    if (room && (room.escrowStatus === 'held' || room.escrowStatus === 'suspended')) {
+        showToast('❌ ไม่สามารถลบดีลที่มีเงินกักเก็บอยู่ในระบบ Escrow ได้ กรุณาปล่อยเงินหรือแก้ไขข้อพิพาทให้เสร็จก่อน', 'error');
+        return;
+    }
+
     if (confirm('คุณต้องการลบช่องแชทและดีลนี้แบบถาวรใช่หรือไม่?\n\n⚠️ คำเตือน: ประวัติการสนทนา รูปภาพ และความเคลื่อนไหว Escrow ทั้งหมดจะถูกลบออกจากฐานข้อมูลอย่างถาวรโดยไม่สามารถกู้คืนได้')) {
         
         if (state.activeRoomId === roomId) {
