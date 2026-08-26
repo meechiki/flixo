@@ -520,6 +520,20 @@ function checkPdpaConsentState() {
     return true;
 }
 
+// Blocks ticking the PDPA/Terms checkbox directly — checking it forces the user
+// through the consent wizard first; only finishConsentWizard() is allowed to check it.
+function handlePdpaCheckboxClick(event) {
+    const chk = event.target;
+    if (chk.checked) {
+        event.preventDefault();
+        chk.checked = false;
+        openConsentWizard(1);
+        return false;
+    }
+    toggleLoginButtonsState();
+    return true;
+}
+
 function toggleLoginButtonsState() {
     const chk = document.getElementById('chk-pdpa-consent');
     const isChecked = chk && chk.checked;
