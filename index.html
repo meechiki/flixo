@@ -417,13 +417,11 @@
                                 <h4><i class="fa-solid fa-truck"></i> แจ้งเลขพัสดุ</h4>
                                 <div class="form-group">
                                     <label for="tracking-carrier">บริษัทขนส่ง</label>
+                                    <!-- Spec 1.3.1.5, phase 1: only Thailand Post's tracking API is wired up.
+                                         Other carriers stay in carrierLabels (app.js) so adding them later
+                                         is just re-enabling their <option> once each carrier's API is integrated. -->
                                     <select id="tracking-carrier">
-                                        <option value="flash">Flash Express</option>
-                                        <option value="jt">J&amp;T Express</option>
                                         <option value="thpost">Thailand Post / ไปรษณีย์ไทย</option>
-                                        <option value="kerry">Kerry Express</option>
-                                        <option value="dhl">DHL</option>
-                                        <option value="scg">SCG Express</option>
                                         <option value="digital">ส่งมอบดิจิทัล (ไม่ต้องขนส่ง)</option>
                                     </select>
                                 </div>
@@ -431,7 +429,17 @@
                                     <label for="tracking-number">เลขพัสดุ</label>
                                     <input type="text" id="tracking-number" placeholder="เช่น TH123456789">
                                 </div>
-                                <button class="btn-primary btn-block" onclick="submitTrackingNumber()" style="border-radius: var(--radius-sm); padding: 8px; font-size: 13px;">
+                                <div class="form-group">
+                                    <label>ภาพสภาพสินค้าก่อนจัดส่ง <span class="req">*</span></label>
+                                    <input type="file" id="ship-evidence-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleShipEvidenceSelect(event)">
+                                    <div id="ship-evidence-preview-wrap" style="display:none; margin-bottom:8px; text-align:center;">
+                                        <img id="ship-evidence-preview-img" style="max-width:140px;max-height:140px;border-radius:8px;object-fit:cover;">
+                                    </div>
+                                    <button type="button" class="btn-secondary btn-block btn-sm" onclick="document.getElementById('ship-evidence-file-input').click()" style="border-radius: var(--radius-sm); padding: 7px;">
+                                        <i class="fa-solid fa-camera"></i> <span id="ship-evidence-btn-label">แนบภาพสภาพสินค้า</span>
+                                    </button>
+                                </div>
+                                <button class="btn-primary btn-block mt-8" onclick="submitTrackingNumber()" style="border-radius: var(--radius-sm); padding: 8px; font-size: 13px;">
                                     <i class="fa-solid fa-paper-plane"></i> ส่งข้อมูลพัสดุ
                                 </button>
                             </div>
@@ -822,12 +830,17 @@
             </div>
             <div class="modal-body">
                 <p class="modal-desc">อัปโหลดบัตรประชาชนและรูปถ่ายเพื่อยืนยันสิทธิ์ในระบบ FLIXO</p>
+                <div class="form-group">
+                    <label for="kyc-id-number">เลขประจำตัวประชาชน (13 หลัก) <span class="req">*</span></label>
+                    <input type="text" id="kyc-id-number" placeholder="เช่น 1234567890123" maxlength="13" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)">
+                </div>
                 <div class="kyc-upload-grid">
                     <div class="kyc-upload-box">
                         <div class="upload-icon"><i class="fa-solid fa-address-card"></i></div>
                         <span>ภาพหน้าบัตรประชาชน</span>
                         <div class="sim-file-input">
-                            <button class="btn-secondary btn-sm" onclick="simulateFileUpload('id-card')">เลือกรูปจำลอง</button>
+                            <input type="file" id="kyc-id-card-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleKycFileSelect(event, 'id-card')">
+                            <button class="btn-secondary btn-sm" onclick="document.getElementById('kyc-id-card-file-input').click()">เลือกรูปภาพ (JPG/PNG, ไม่เกิน 5MB)</button>
                             <span id="kyc-id-card-filename" class="file-name-text">ไม่ได้เลือกไฟล์</span>
                         </div>
                         <div class="preview-img-container" id="kyc-id-card-preview" style="display: none;"></div>
@@ -836,7 +849,8 @@
                         <div class="upload-icon"><i class="fa-solid fa-camera"></i></div>
                         <span>รูปถ่าย Selfie คู่บัตร</span>
                         <div class="sim-file-input">
-                            <button class="btn-secondary btn-sm" onclick="simulateFileUpload('selfie')">เลือกรูปจำลอง</button>
+                            <input type="file" id="kyc-selfie-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleKycFileSelect(event, 'selfie')">
+                            <button class="btn-secondary btn-sm" onclick="document.getElementById('kyc-selfie-file-input').click()">เลือกรูปภาพ (JPG/PNG, ไม่เกิน 5MB)</button>
                             <span id="kyc-selfie-filename" class="file-name-text">ไม่ได้เลือกไฟล์</span>
                         </div>
                         <div class="preview-img-container" id="kyc-selfie-preview" style="display: none;"></div>
@@ -974,7 +988,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="dispute-contact-channel">ช่องทางให้แอดมินติดต่อกลับด่วน</label>
+                    <label for="dispute-contact-channel">ช่องทางให้แอดมินติดต่อกลับด่วน <span class="req">*</span></label>
                     <div style="display: flex; gap: 8px; margin-bottom: 6px;">
                         <select id="dispute-contact-channel" style="flex: 1;">
                             <option value="phone">📱 เบอร์มือถือ</option>

@@ -119,6 +119,10 @@ let state = {
 
 // Base64 upload cache for dispute
 let disputeEvidenceBase64 = null;
+// Spec 1.3.1.9 / 1.3.1.10: mandatory condition-photo evidence, attached once
+// per deal before shipping (seller) and before confirming receipt (buyer).
+let sellerShipEvidenceBase64 = null;
+let buyerReceiptEvidenceBase64 = null;
 
 // Database of Master Users in System (Formatted as XXX-XXX ID)
 const MOCK_USERS = [
@@ -157,11 +161,43 @@ let activeUnsubscribers = {
     messages: null,
     kyc: null,
     disputes: null,
-    session: null
+    session: null,
+    users: null
 };
+// Spec 1.3.4.1: real-time online-user count for the admin dashboard.
+let presenceHeartbeatInterval = null;
+let adminOnlineCountInterval = null;
+let state_allUsersPresence = [];
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // a user with no heartbeat in 3 min counts as offline
 
 function generateSessionId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+
+// Spec 1.3.4.1: writes a "last active" heartbeat every 60s while a user is
+// logged in, so the admin dashboard can count genuinely-online users instead
+// of showing a static placeholder.
+function startPresenceHeartbeat() {
+    if (presenceHeartbeatInterval) clearInterval(presenceHeartbeatInterval);
+    if (!isFirebaseEnabled || !db || !state.loggedInUser) return;
+    const beat = () => {
+        if (!state.loggedInUser) return;
+        db.collection('users').doc(state.loggedInUser.id).update({ lastActiveAt: Date.now() }).catch(() => {});
+    };
+    beat();
+    presenceHeartbeatInterval = setInterval(beat, 60 * 1000);
+}
+function stopPresenceHeartbeat() {
+    if (presenceHeartbeatInterval) { clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; }
+}
+
+function computeOnlineUserCount() {
+    const now = Date.now();
+    return state_allUsersPresence.filter(u => u.lastActiveAt && (now - u.lastActiveAt) < ONLINE_THRESHOLD_MS).length;
+}
+function updateOnlineUserCountDisplay() {
+    const statUsers = document.getElementById('admin-stat-users');
+    if (statUsers && isFirebaseEnabled) statUsers.innerText = `${computeOnlineUserCount()} คน (ออนไลน์)`;
 }
 
 // Initial Setup
@@ -923,6 +959,7 @@ function enterMainApp(user) {
 
     // Initialize Real-time Database Listeners if available
     initRealtimeListeners();
+    startPresenceHeartbeat();
 
     // Single-session-per-account enforcement: claim this login as the active
     // session, then (only once that claim is committed) watch for another
@@ -951,6 +988,8 @@ function enterMainApp(user) {
 
 function resetSessionState() {
     unsubscribeAllListeners();
+    stopPresenceHeartbeat();
+    if (adminOnlineCountInterval) { clearInterval(adminOnlineCountInterval); adminOnlineCountInterval = null; }
     state.mySessionId = null;
     state.loggedInUser = null;
     state.loginStep = 'phone';
@@ -1029,6 +1068,7 @@ function initRealtimeListeners() {
             renderDealChatWindow();
             if (isAdmin) renderAdminPanel();
 
+            checkSimulatedDeliveryStatus(roomsList);
             checkAutoReleaseEscrow(roomsList);
         }, err => {
             console.error("Rooms listener error:", err);
@@ -1061,6 +1101,23 @@ function initRealtimeListeners() {
 
                 cleanupOldDisputes(list);
             });
+
+        // 4. Spec 1.3.4.1: presence for the admin dashboard's online-user count.
+        // Every user's client writes a `lastActiveAt` heartbeat (startPresenceHeartbeat);
+        // admins listen to the whole users collection and count who's recently active.
+        if (isAdmin) {
+            activeUnsubscribers.users = db.collection('users').onSnapshot(snapshot => {
+                const list = [];
+                snapshot.forEach(doc => list.push(doc.data()));
+                state_allUsersPresence = list;
+                updateOnlineUserCountDisplay();
+            });
+            if (adminOnlineCountInterval) clearInterval(adminOnlineCountInterval);
+            // Refresh just the stat text periodically too (not a full re-render), so the
+            // count decays even without a new write — a user who stopped sending
+            // heartbeats would otherwise look online forever.
+            adminOnlineCountInterval = setInterval(updateOnlineUserCountDisplay, 30 * 1000);
+        }
     } catch(e) {
         console.warn("initRealtimeListeners error caught safely:", e);
     }
@@ -1075,24 +1132,53 @@ function unsubscribeAllListeners() {
     }
 }
 
+// Spec 1.3.1.5: in-platform parcel tracking. There is no real Thailand Post
+// API credential wired into this prototype, so MOCK_CARRIER_API simulates the
+// carrier reporting "delivered" some time after the seller submits a tracking
+// number — swap this function's body for a real `fetch()` to Thailand Post's
+// tracking endpoint (keyed on room.trackingNumber) to go live; every caller
+// already treats `deliveredAt` as the carrier-reported source of truth, not a
+// seller-entered date, so no other code needs to change.
+const MOCK_CARRIER_TRANSIT_MS = 2 * 24 * 60 * 60 * 1000; // simulated time-in-transit before "delivered"
+function checkSimulatedDeliveryStatus(rooms) {
+    if (!isFirebaseEnabled || !db) return;
+    rooms.forEach(room => {
+        if (room.escrowStatus === 'held' && room.trackingSubmittedAt && !room.deliveredAt &&
+            (Date.now() - room.trackingSubmittedAt) > MOCK_CARRIER_TRANSIT_MS) {
+            db.collection('rooms').doc(room.id).update({ deliveredAt: Date.now() }).then(() => {
+                db.collection('rooms').doc(room.id).collection('messages').add({
+                    sender: 'system',
+                    text: `📦 [สถานะพัสดุ]: ${room.trackingCarrier === 'thpost' ? 'ไปรษณีย์ไทย' : 'ระบบขนส่ง'} รายงานว่านำจ่ายสำเร็จแล้ว กรุณาตรวจสอบสินค้าและกดยืนยันรับสินค้า`,
+                    timestamp: getFormattedTime(),
+                    clientTimestamp: Date.now(),
+                    serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    isSystem: true
+                });
+            }).catch(err => console.warn('Delivery status update failed:', err));
+        }
+    });
+}
+
 // Spec 1.3.1.6: if the buyer never confirms receipt, release funds to the
-// seller automatically 4 days after the tracking number was submitted.
-// There is no backend/scheduled job in this static app, so this runs
-// opportunistically whenever any party's client (buyer, seller, or admin)
-// receives a fresh rooms snapshot.
+// seller automatically 4 days after the CARRIER reports the parcel as
+// delivered (room.deliveredAt, set by checkSimulatedDeliveryStatus above) —
+// not from when the seller submitted the tracking number. There is no
+// backend/scheduled job in this static app, so this runs opportunistically
+// whenever any party's client (buyer, seller, or admin) receives a fresh
+// rooms snapshot.
 const AUTO_RELEASE_MS = 4 * 24 * 60 * 60 * 1000;
 function checkAutoReleaseEscrow(rooms) {
     if (!isFirebaseEnabled || !db) return;
     rooms.forEach(room => {
-        if (room.escrowStatus === 'held' && room.trackingSubmittedAt && (Date.now() - room.trackingSubmittedAt) > AUTO_RELEASE_MS) {
+        if (room.escrowStatus === 'held' && room.deliveredAt && (Date.now() - room.deliveredAt) > AUTO_RELEASE_MS) {
             db.collection('rooms').doc(room.id).update({
                 escrowStatus: 'released',
                 status: 'closed',
-                escrowMoneyState: 'ระบบปล่อยเงินอัตโนมัติ (ผู้ซื้อไม่ยืนยันภายใน 4 วันหลังแจ้งจัดส่ง)'
+                escrowMoneyState: 'ระบบปล่อยเงินอัตโนมัติ (ผู้ซื้อไม่ยืนยันภายใน 4 วันหลังพัสดุนำจ่ายสำเร็จ)'
             }).then(() => {
                 db.collection('rooms').doc(room.id).collection('messages').add({
                     sender: 'system',
-                    text: `🔒 [ระบบตัวกลาง]: ครบกำหนด 4 วันหลังแจ้งจัดส่งพัสดุโดยไม่มีการยืนยันรับสินค้า ระบบปล่อยเงิน ฿${(room.escrowAmount || 0).toLocaleString()} ให้ผู้ขายโดยอัตโนมัติ และปิดห้องแชทถาวร`,
+                    text: `🔒 [ระบบตัวกลาง]: ครบกำหนด 4 วันหลังพัสดุนำจ่ายสำเร็จโดยไม่มีการยืนยันรับสินค้า ระบบปล่อยเงิน ฿${(room.escrowAmount || 0).toLocaleString()} ให้ผู้ขายโดยอัตโนมัติ และปิดห้องแชทถาวร (สถานะนำจ่ายสำเร็จจากผู้ให้บริการขนส่งใช้เป็นหลักฐานประกอบการพิจารณาหากมีข้อพิพาทภายหลัง)`,
                     timestamp: getFormattedTime(),
                     clientTimestamp: Date.now(),
                     serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1898,16 +1984,16 @@ function renderDealChatWindow() {
     inputArea.style.display = 'flex';
     detailsPanel.style.display = 'block';
     
-    // Check ban status
-    const banKey = `flixo_chat_banned_until_${state.loggedInUser.id}`;
+    // Check ban status (Spec 1.3.1.2.3: scoped to this room, see sendDealMessage/handleChatWarning)
+    const banKey = `flixo_chat_banned_until_${state.loggedInUser.id}_${activeRoom.id}`;
     const bannedUntil = parseInt(localStorage.getItem(banKey) || '0');
     const inputField = document.getElementById('active-chat-input');
     const sendBtn = document.querySelector('.chat-input-area button.btn-primary');
-    
+
     if (Date.now() < bannedUntil) {
         if (inputField) {
             inputField.disabled = true;
-            inputField.placeholder = "ถูกระงับการแชทชั่วคราว...";
+            inputField.placeholder = "ห้องแชทนี้ถูกระงับชั่วคราว...";
             inputField.value = '';
         }
         if (sendBtn) sendBtn.disabled = true;
@@ -1990,8 +2076,12 @@ function renderDealChatWindow() {
             if (activeRoom.escrowStatus === 'held') {
                 if (moneyState) moneyState.innerHTML = '<i class="fa-solid fa-circle-check" style="color:var(--success);"></i> เงินเข้าระบบกองกลางเรียบร้อย';
                 actionContainer.innerHTML = `
-                    <button class="btn-success btn-block" onclick="confirmEscrowReceipt('${activeRoom.id}')">
-                        <i class="fa-solid fa-circle-check"></i> ตรวจของครบแล้ว & ปล่อยเงินโอน
+                    <input type="file" id="receipt-evidence-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleReceiptEvidenceSelect(event)">
+                    <div id="receipt-evidence-preview-wrap" style="display:none; margin-bottom:8px; text-align:center;">
+                        <img id="receipt-evidence-preview-img" style="max-width:140px;max-height:140px;border-radius:8px;object-fit:cover;">
+                    </div>
+                    <button class="btn-success btn-block" id="btn-confirm-receipt" onclick="triggerConfirmReceiptFlow('${activeRoom.id}')">
+                        <i class="fa-solid fa-camera"></i> <span id="confirm-receipt-btn-label">แนบภาพสินค้าที่ได้รับ & ยืนยันรับสินค้า</span>
                     </button>
                     <button class="btn-danger btn-block mt-8" onclick="triggerOpenDisputeModal('${activeRoom.id}')" style="border-radius: var(--radius-sm); padding: 9px; font-size: 13px; font-weight: 500;">
                         <i class="fa-solid fa-triangle-exclamation"></i> แจ้งโดนโกง (เปิดข้อพิพาท)
@@ -2244,15 +2334,18 @@ async function sendDealMessage() {
     }
     
     const userId = state.loggedInUser.id;
-    const banKey = `flixo_chat_banned_until_${userId}`;
+    // Spec 1.3.1.2.3: the lock applies to this specific chat room, not to the
+    // user's chats in general — key it on (user, room) so an offending user
+    // can still message their other, unrelated deals.
+    const banKey = `flixo_chat_banned_until_${userId}_${activeRoom.id}`;
     const bannedUntil = parseInt(localStorage.getItem(banKey) || '0');
-    
+
     if (Date.now() < bannedUntil) {
         const minutesLeft = Math.ceil((bannedUntil - Date.now()) / 60000);
-        showToast(`🚫 คุณถูกระงับการแชทชั่วคราว เหลือเวลาอีก ${minutesLeft} นาที`, 'error');
+        showToast(`🚫 ห้องแชทนี้ถูกระงับชั่วคราว เหลือเวลาอีก ${minutesLeft} นาที`, 'error');
         return;
     }
-    
+
     // UI Loading state
     const originalBtnHtml = sendBtn ? sendBtn.innerHTML : '';
     if (input) input.disabled = true;
@@ -2269,7 +2362,7 @@ async function sendDealMessage() {
                 sendBtn.disabled = false;
                 sendBtn.innerHTML = originalBtnHtml;
             }
-            handleChatWarning();
+            handleChatWarning(activeRoom.id);
             return;
         }
     }
@@ -2544,22 +2637,56 @@ function simulateKycPaymentSuccess() {
     showToast(`✅ ชำระเงินกักเก็บ ฿${amount.toLocaleString()} เข้าบัญชีกลางสำเร็จ!`, 'success');
 }
 
+// Spec 1.3.1.10: buyer must attach a photo of the item's actual received
+// condition before confirming receipt; stored as dispute evidence alongside
+// the seller's pre-ship photo (submitTrackingNumber -> shipEvidenceImg).
+function handleReceiptEvidenceSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!validateImageFile(file)) return;
+
+    resizeBase64ImageFromFile(file, function(resizedBase64) {
+        buyerReceiptEvidenceBase64 = resizedBase64;
+        const wrap = document.getElementById('receipt-evidence-preview-wrap');
+        const img = document.getElementById('receipt-evidence-preview-img');
+        const label = document.getElementById('confirm-receipt-btn-label');
+        if (img) img.src = resizedBase64;
+        if (wrap) wrap.style.display = 'block';
+        if (label) label.textContent = 'ตรวจของครบแล้ว & ปล่อยเงินโอน';
+        showToast('📸 แนบภาพสำเร็จ กดปุ่มอีกครั้งเพื่อยืนยันรับสินค้า', 'success');
+    });
+}
+
+function triggerConfirmReceiptFlow(roomId) {
+    if (!buyerReceiptEvidenceBase64) {
+        showToast('📸 กรุณาแนบภาพสภาพสินค้าที่ได้รับก่อนยืนยันรับสินค้า', 'info');
+        const input = document.getElementById('receipt-evidence-file-input');
+        if (input) input.click();
+        return;
+    }
+    confirmEscrowReceipt(roomId);
+}
+
 function confirmEscrowReceipt(roomId) {
     const activeRoom = state.rooms.find(r => r.id === roomId);
     if (!activeRoom) return;
-    
+
     if (confirm('คุณแน่ใจว่าได้รับของครบถ้วนแล้ว? หลังจากกดยอมรับ ระบบจะปล่อยโอนเงินให้ฝั่งผู้ขายทันที ดีลนี้จะถือว่าเสร็จสมบูรณ์และปิดแชท')) {
+        const receiptImg = buyerReceiptEvidenceBase64;
+        const evidenceMsg = { sender: state.loggedInUser.id, text: '📸 ภาพสภาพสินค้าที่ได้รับจริง', image: receiptImg, timestamp: getFormattedTime(), clientTimestamp: Date.now() };
         if (isFirebaseEnabled && db) {
             db.collection('rooms').doc(activeRoom.id).update({
                 escrowStatus: 'released',
                 status: 'closed',
-                escrowMoneyState: 'โอนเงินเข้าบัญชีเรียบร้อย'
+                escrowMoneyState: 'โอนเงินเข้าบัญชีเรียบร้อย',
+                receiptEvidenceImg: receiptImg
             });
+            db.collection('rooms').doc(activeRoom.id).collection('messages').add({ ...evidenceMsg, serverTimestamp: firebase.firestore.FieldValue.serverTimestamp() });
             db.collection('rooms').doc(activeRoom.id).collection('messages').add({
                 sender: 'system',
                 text: `🔒 [ระบบตัวกลาง]: ผู้ซื้อกดยืนยันรับของสำเร็จ โอนเงิน ฿${activeRoom.escrowAmount.toLocaleString()} เข้าบัญชีเรียบร้อย จบดีลสมบูรณ์และปิดห้องแชทถาวร`,
                 timestamp: getFormattedTime(),
-                clientTimestamp: Date.now(),
+                clientTimestamp: Date.now() + 1,
                 serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 isSystem: true,
                 escrowState: 'released'
@@ -2568,16 +2695,18 @@ function confirmEscrowReceipt(roomId) {
             activeRoom.escrowStatus = 'released';
             activeRoom.status = 'closed';
             activeRoom.escrowMoneyState = 'โอนเงินเข้าบัญชีเรียบร้อย';
-            activeRoom.messages.push({
+            activeRoom.receiptEvidenceImg = receiptImg;
+            activeRoom.messages.push(evidenceMsg, {
                 sender: 'system',
                 text: `🔒 [ระบบตัวกลาง]: ผู้ซื้อกดยืนยันรับของสำเร็จ โอนเงิน ฿${activeRoom.escrowAmount.toLocaleString()} เข้าบัญชีเรียบร้อย จบดีลสมบูรณ์และปิดห้องแชทถาวร`,
                 timestamp: getFormattedTime(),
-                clientTimestamp: Date.now(),
+                clientTimestamp: Date.now() + 1,
                 isSystem: true,
                 escrowState: 'released'
             });
             updateViews();
         }
+        buyerReceiptEvidenceBase64 = null;
         showToast('🔒 ดีลเสร็จสมบูรณ์เรียบร้อยแล้ว', 'success');
     }
 }
@@ -2773,7 +2902,21 @@ async function submitDispute() {
             if (submitBtn) { submitBtn.innerHTML = originalBtnHtml; submitBtn.disabled = false; }
             return;
         }
-        
+
+        // Spec 1.3.3.2: a callback contact is mandatory when filing a dispute
+        // (phone number is the primary channel; email is allowed as an
+        // alternative), so the admin can always reach the reporting user.
+        if (!contactDetail) {
+            alert('กรุณาระบุช่องทางให้แอดมินติดต่อกลับ (เบอร์โทรศัพท์ หรือ Gmail/อีเมล)');
+            if (submitBtn) { submitBtn.innerHTML = originalBtnHtml; submitBtn.disabled = false; }
+            return;
+        }
+        if (contactChannel === 'phone' && !/^0[0-9]{8,9}$/.test(contactDetail.replace(/[\s-]/g, ''))) {
+            alert('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (ขึ้นต้นด้วย 0 จำนวน 9-10 หลัก)');
+            if (submitBtn) { submitBtn.innerHTML = originalBtnHtml; submitBtn.disabled = false; }
+            return;
+        }
+
         const reason = contactDetail ? `${reasonInput}\n[ช่องทางติดต่อกลับ: ${contactChannel} -> ${contactDetail}]` : reasonInput;
         
         // MANDATORY REAL EVIDENCE UPLOAD
@@ -3000,6 +3143,8 @@ function openKycModal() {
     document.getElementById('kyc-selfie-filename').innerText = 'ไม่ได้เลือกไฟล์';
     document.getElementById('kyc-id-card-preview').style.display = 'none';
     document.getElementById('kyc-selfie-preview').style.display = 'none';
+    const idNumberInput = document.getElementById('kyc-id-number');
+    if (idNumberInput) idNumberInput.value = '';
     state.mockFiles.idCard = null;
     state.mockFiles.selfie = null;
     document.getElementById('modal-kyc').style.display = 'flex';
@@ -3015,47 +3160,60 @@ function closeModal(id) {
     if (modal) modal.style.display = 'none';
 }
 
-function simulateFileUpload(type) {
+// Spec 1.3.2.2: real file upload for e-KYC — JPG/JPEG/PNG only, max 5MB.
+// The "force fail" checkbox stays as a labeled demo toggle for exercising the
+// admin-review path; it no longer substitutes a mock stock photo for the
+// user's real upload, it only affects the *simulated review outcome*.
+function handleKycFileSelect(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!validateImageFile(file)) { event.target.value = ''; return; }
+
     const filename = document.getElementById(type === 'id-card' ? 'kyc-id-card-filename' : 'kyc-selfie-filename');
     const preview = document.getElementById(type === 'id-card' ? 'kyc-id-card-preview' : 'kyc-selfie-preview');
-    const forceFail = document.getElementById('kyc-force-fail').checked;
-    
-    if (type === 'id-card') {
-        const img = forceFail ? MOCK_PHOTOS.idCardFail : MOCK_PHOTOS.idCard;
-        state.mockFiles.idCard = img;
-        filename.innerText = forceFail ? 'id_card_blurry.jpg' : 'thai_id_card_user.png';
-        preview.style.backgroundImage = `url('${img}')`;
-        preview.style.display = 'block';
-    } else {
-        const img = forceFail ? MOCK_PHOTOS.selfieFail : MOCK_PHOTOS.selfie;
-        state.mockFiles.selfie = img;
-        filename.innerText = forceFail ? 'selfie_blurry.jpg' : 'user_selfie_hq.png';
-        preview.style.backgroundImage = `url('${img}')`;
-        preview.style.display = 'block';
-    }
+
+    resizeBase64ImageFromFile(file, function(resizedBase64) {
+        if (type === 'id-card') {
+            state.mockFiles.idCard = resizedBase64;
+        } else {
+            state.mockFiles.selfie = resizedBase64;
+        }
+        if (filename) filename.innerText = file.name;
+        if (preview) {
+            preview.style.backgroundImage = `url('${resizedBase64}')`;
+            preview.style.display = 'block';
+        }
+    });
 }
 
 function submitKyc() {
     const forceFail = document.getElementById('kyc-force-fail').checked;
-    
+    const idNumberInput = document.getElementById('kyc-id-number');
+    const idNumber = idNumberInput ? idNumberInput.value.trim() : '';
+
     if (!state.mockFiles.idCard || !state.mockFiles.selfie) {
-        alert('กรุณาจำลองเลือกเอกสารหลักฐานทั้ง 2 ช่อง');
+        alert('กรุณาแนบภาพบัตรประชาชนและภาพถ่าย Selfie คู่บัตรทั้ง 2 ช่อง');
         return;
     }
-    
+    if (!/^[0-9]{13}$/.test(idNumber)) {
+        alert('กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก');
+        return;
+    }
+
     closeModal('modal-kyc');
-    
+
     state.loggedInUser.kycStatus = 'pending';
     updateViews();
-    
+
     setTimeout(() => {
         if (forceFail) {
             state.loggedInUser.kycStatus = 'failed';
-            
+
             const kycSubmission = {
                 user: state.loggedInUser,
                 idCardImg: state.mockFiles.idCard,
                 selfieImg: state.mockFiles.selfie,
+                idNumber: idNumber,
                 aiConfidence: '35% (ความเข้ากันได้ใบหน้าต่ำ)',
                 status: 'pending'
             };
@@ -3068,11 +3226,21 @@ function submitKyc() {
             alert('❌ [e-KYC AI]: สแกนไม่ผ่านเกณฑ์ส่งคำขอของท่านเข้าคิว แอดมินตรวจสอบด้วยตนเองแล้ว');
         } else {
             state.loggedInUser.kycStatus = 'verified';
+            // Spec 1.3.2.2: persist name, selfie photo, and ID number for admin review,
+            // restricted-access fields (Spec 1.3.5.3 governs who may read them).
             if (isFirebaseEnabled) {
-                db.collection('users').doc(state.loggedInUser.id).update({ kycStatus: 'verified' });
+                db.collection('users').doc(state.loggedInUser.id).update({
+                    kycStatus: 'verified',
+                    idNumber: idNumber,
+                    kycSelfieImg: state.mockFiles.selfie
+                });
             } else {
                 const dbUser = MOCK_USERS.find(u => u.id === state.loggedInUser.id);
-                if (dbUser) dbUser.kycStatus = 'verified';
+                if (dbUser) {
+                    dbUser.kycStatus = 'verified';
+                    dbUser.idNumber = idNumber;
+                    dbUser.kycSelfieImg = state.mockFiles.selfie;
+                }
             }
             alert('✓ [e-KYC AI]: ยืนยันตัวตนสำเร็จ! ปลดล็อกเครื่องมือดีลซื้อขายทั้งหมด');
         }
@@ -3090,9 +3258,13 @@ function submitKyc() {
 // ==========================================================================
 
 function renderAdminPanel() {
-    // Stat 1: Users Count
-    const statUsers = document.getElementById('admin-stat-users');
-    if (statUsers) statUsers.innerText = isFirebaseEnabled ? 'ออนไลน์' : `${MOCK_USERS.length} คน`;
+    // Stat 1: Users Count (Spec 1.3.4.1: real online-user count via presence heartbeat)
+    if (isFirebaseEnabled) {
+        updateOnlineUserCountDisplay();
+    } else {
+        const statUsers = document.getElementById('admin-stat-users');
+        if (statUsers) statUsers.innerText = `${MOCK_USERS.length} คน`;
+    }
     
     // Stat 2: Escrow Locked
     let totalEscrow = 0;
@@ -3597,28 +3769,53 @@ function updateBankInfoDisplay() {
     }
 }
 
+// Spec 1.3.1.9: seller must attach a real photo of the item's condition
+// before shipping; stored as dispute evidence.
+function handleShipEvidenceSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!validateImageFile(file)) return;
+
+    resizeBase64ImageFromFile(file, function(resizedBase64) {
+        sellerShipEvidenceBase64 = resizedBase64;
+        const wrap = document.getElementById('ship-evidence-preview-wrap');
+        const img = document.getElementById('ship-evidence-preview-img');
+        const label = document.getElementById('ship-evidence-btn-label');
+        if (img) img.src = resizedBase64;
+        if (wrap) wrap.style.display = 'block';
+        if (label) label.textContent = 'เปลี่ยนภาพสภาพสินค้า';
+    });
+}
+
 function submitTrackingNumber() {
     const activeRoom = state.rooms.find(r => r.id === state.activeRoomId);
     if (!activeRoom) return;
     const carrier = document.getElementById('tracking-carrier').value;
     const number = document.getElementById('tracking-number').value.trim();
     if (!number) { showToast('❌ กรุณากรอกเลขพัสดุ', 'error'); return; }
+    if (!sellerShipEvidenceBase64) { showToast('📸 กรุณาแนบภาพสภาพสินค้าก่อนจัดส่งก่อนส่งข้อมูลพัสดุ', 'error'); return; }
     const carrierLabels = { flash:'Flash Express', jt:'J&T Express', thpost:'ไปรษณีย์ไทย', kerry:'Kerry Express', dhl:'DHL', scg:'SCG Express', digital:'ส่งมอบดิจิทัล' };
     const carrierName = carrierLabels[carrier] || carrier;
     const trackMsg = { sender: 'system', text: `📦 ผู้ขายแจ้งจัดส่งพัสดุแล้ว | ขนส่ง: ${carrierName} | เลขพัสดุ: ${number}`, timestamp: getFormattedTime(), clientTimestamp: Date.now(), isSystem: true };
+    // Post the seller's condition-before-shipping photo as a regular chat message
+    // (sender = seller) so it renders inline and is retrievable as dispute evidence.
+    const evidenceMsg = { sender: state.loggedInUser.id, text: '📸 ภาพสภาพสินค้าก่อนจัดส่ง', image: sellerShipEvidenceBase64, timestamp: getFormattedTime(), clientTimestamp: Date.now() + 1 };
     activeRoom.trackingNumber = number;
     activeRoom.trackingCarrier = carrier;
     if (isFirebaseEnabled && db) {
         db.collection('rooms').doc(activeRoom.id).collection('messages').add({ ...trackMsg, serverTimestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        db.collection('rooms').doc(activeRoom.id).update({ trackingNumber: number, trackingCarrier: carrier, trackingSubmittedAt: Date.now() });
+        db.collection('rooms').doc(activeRoom.id).collection('messages').add({ ...evidenceMsg, serverTimestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        db.collection('rooms').doc(activeRoom.id).update({ trackingNumber: number, trackingCarrier: carrier, trackingSubmittedAt: Date.now(), shipEvidenceImg: sellerShipEvidenceBase64 });
     } else {
-        activeRoom.messages.push(trackMsg);
+        activeRoom.messages.push(trackMsg, evidenceMsg);
+        activeRoom.shipEvidenceImg = sellerShipEvidenceBase64;
         state.activeRoomMessages = activeRoom.messages;
         renderActiveChatMessagesUI();
     }
+    sellerShipEvidenceBase64 = null;
     const tf = document.getElementById('seller-tracking-form');
     if (tf) tf.style.display = 'none';
-    showToast('📦 แจ้งเลขพัสดุเรียบร้อยแล้ว', 'success');
+    showToast('📦 แจ้งเลขพัสดุและภาพสภาพสินค้าเรียบร้อยแล้ว', 'success');
 }
 
 function toggleArchiveDispute(disputeId) {
@@ -3687,6 +3884,21 @@ function rejectProposal(roomId, msgTimestamp) {
 
 // Compress any image file to tiny width/height (max 500px) and 0.6 quality JPEG to keep it under 30KB
 // This prevents Firestore document maximum size limit (1MB) errors when storing base64.
+// Spec 1.3.2.2: accept JPG/JPEG/PNG only, max 5MB per file. Shared by every
+// image-upload flow (KYC, shipping/receipt evidence, chat images, proposals).
+function validateImageFile(file) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+        showToast('❌ รองรับเฉพาะไฟล์ JPG, JPEG หรือ PNG เท่านั้น', 'error');
+        return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('❌ ไฟล์ใหญ่เกิน 5MB', 'error');
+        return false;
+    }
+    return true;
+}
+
 function resizeBase64ImageFromFile(file, callback) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -3864,23 +4076,26 @@ async function checkMessageFilter(text) {
     return true;
 }
 
-function handleChatWarning() {
+// Spec 1.3.1.2.3: 5 warnings locks THIS chat room for 15 minutes (roomId is
+// required so the counter/lock don't leak across a user's other deals).
+function handleChatWarning(roomId) {
     const userId = state.loggedInUser.id;
-    const warningsKey = "flixo_chat_warnings_" + userId;
-    const banKey = "flixo_chat_banned_until_" + userId;
-    
+    const scopeKey = `${userId}_${roomId}`;
+    const warningsKey = "flixo_chat_warnings_" + scopeKey;
+    const banKey = "flixo_chat_banned_until_" + scopeKey;
+
     let warnings = parseInt(localStorage.getItem(warningsKey) || '0');
     warnings += 1;
-    
+
     if (warnings >= 5) {
         const banUntil = Date.now() + 15 * 60 * 1000;
         localStorage.setItem(banKey, banUntil.toString());
         localStorage.setItem(warningsKey, '0');
-        showToast('🚫 คุณถูกระงับการแชท 15 นาที เนื่องจากละเมิดกฎซ้ำซาก', 'error');
+        showToast('🚫 ห้องแชทนี้ถูกระงับ 15 นาที เนื่องจากละเมิดกฎซ้ำซาก', 'error');
         renderDealChatWindow();
     } else {
         localStorage.setItem(warningsKey, warnings.toString());
-        showToast('⚠️ คำเตือน: ตรวจพบคำพูดไม่เหมาะสมหรือผิดกฎ (ครั้งที่ ' + warnings + '/5) หากครบ 5 ครั้งจะถูกแบน', 'warning');
+        showToast('⚠️ คำเตือน: ตรวจพบคำพูดไม่เหมาะสมหรือผิดกฎ (ครั้งที่ ' + warnings + '/5) หากครบ 5 ครั้งจะถูกระงับห้องแชทนี้', 'warning');
     }
 }
 
