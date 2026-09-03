@@ -7,6 +7,10 @@
 // See config.example.js for the template.
 const TYPHOON_API_KEY = window.FLIXO_TYPHOON_API_KEY || "";
 
+// Thailand Post Track & Trace static token, same git-ignored config.js pattern.
+// When absent, checkSimulatedDeliveryStatus() falls back to the mock timer.
+const THAILANDPOST_TOKEN = window.FLIXO_THAILANDPOST_TOKEN || "";
+
 // Escapes user-supplied text before it is interpolated into innerHTML, to prevent stored XSS
 // via chat messages / product proposals (e.g. <img onerror=...> in a message or product name).
 function escapeHtml(str) {
@@ -1132,30 +1136,95 @@ function unsubscribeAllListeners() {
     }
 }
 
-// Spec 1.3.1.5: in-platform parcel tracking. There is no real Thailand Post
-// API credential wired into this prototype, so MOCK_CARRIER_API simulates the
-// carrier reporting "delivered" some time after the seller submits a tracking
-// number — swap this function's body for a real `fetch()` to Thailand Post's
-// tracking endpoint (keyed on room.trackingNumber) to go live; every caller
-// already treats `deliveredAt` as the carrier-reported source of truth, not a
-// seller-entered date, so no other code needs to change.
-const MOCK_CARRIER_TRANSIT_MS = 2 * 24 * 60 * 60 * 1000; // simulated time-in-transit before "delivered"
+// Spec 1.3.1.5: in-platform parcel tracking via Thailand Post's real Track &
+// Trace API (https://track.thailandpost.co.th/developerGuide). Two-step auth:
+// exchange the long-lived static token (THAILANDPOST_TOKEN, from config.js —
+// NEVER hardcode it here) for a ~1-month temporary token, then use that
+// temporary token to query /track. If THAILANDPOST_TOKEN isn't configured, or
+// the live call fails for any reason (network, CORS — this API may not permit
+// direct browser calls; a small server-side proxy would be the production
+// fix), this silently falls back to a simulated transit timer so the rest of
+// the app (which treats `deliveredAt` as carrier-reported truth, never a
+// seller-entered date) keeps working either way.
+const THAILANDPOST_API_BASE = 'https://trackapi.thailandpost.co.th/post/api/v1';
+let _thailandPostTempToken = null;
+let _thailandPostTempTokenExpiresAt = 0;
+
+async function getThailandPostToken() {
+    if (_thailandPostTempToken && Date.now() < _thailandPostTempTokenExpiresAt) {
+        return _thailandPostTempToken;
+    }
+    const response = await fetch(`${THAILANDPOST_API_BASE}/authenticate/token`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Token ${THAILANDPOST_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    if (!response.ok) throw new Error('Thailand Post auth failed: ' + response.status);
+    const data = await response.json();
+    _thailandPostTempToken = data.token;
+    _thailandPostTempTokenExpiresAt = Date.now() + 25 * 24 * 60 * 60 * 1000; // refresh a few days before the ~1-month expiry
+    return _thailandPostTempToken;
+}
+
+// Returns { delivered: boolean } for one tracking number, using the real API.
+async function fetchThailandPostStatus(trackingNumber) {
+    const token = await getThailandPostToken();
+    const response = await fetch(`${THAILANDPOST_API_BASE}/track`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'all', language: 'TH', barcode: [trackingNumber] })
+    });
+    if (!response.ok) throw new Error('Thailand Post track failed: ' + response.status);
+    const data = await response.json();
+    const events = (data.response && data.response.items && data.response.items[trackingNumber]) || [];
+    const delivered = events.some(e => e.delivery_status === 'S' || e.status === '501');
+    return { delivered };
+}
+
+const MOCK_CARRIER_TRANSIT_MS = 2 * 24 * 60 * 60 * 1000; // fallback simulated time-in-transit before "delivered"
+
+async function checkDeliveryStatusForRoom(room) {
+    if (room.escrowStatus !== 'held' || !room.trackingSubmittedAt || room.deliveredAt) return;
+
+    let isDelivered = false;
+    let statusNote = `${room.trackingCarrier === 'thpost' ? 'ไปรษณีย์ไทย' : 'ระบบขนส่ง'} รายงานว่านำจ่ายสำเร็จแล้ว`;
+
+    if (THAILANDPOST_TOKEN && room.trackingCarrier === 'thpost' && room.trackingNumber) {
+        try {
+            const result = await fetchThailandPostStatus(room.trackingNumber);
+            isDelivered = result.delivered;
+        } catch (err) {
+            console.warn('Thailand Post live status check failed, falling back to simulated timer:', err);
+        }
+    }
+
+    if (!isDelivered && (Date.now() - room.trackingSubmittedAt) > MOCK_CARRIER_TRANSIT_MS) {
+        isDelivered = true;
+        statusNote += ' (จำลอง)';
+    }
+
+    if (!isDelivered) return;
+
+    await db.collection('rooms').doc(room.id).update({ deliveredAt: Date.now() });
+    await db.collection('rooms').doc(room.id).collection('messages').add({
+        sender: 'system',
+        text: `📦 [สถานะพัสดุ]: ${statusNote} กรุณาตรวจสอบสินค้าและกดยืนยันรับสินค้า`,
+        timestamp: getFormattedTime(),
+        clientTimestamp: Date.now(),
+        serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        isSystem: true
+    });
+}
+
 function checkSimulatedDeliveryStatus(rooms) {
     if (!isFirebaseEnabled || !db) return;
     rooms.forEach(room => {
-        if (room.escrowStatus === 'held' && room.trackingSubmittedAt && !room.deliveredAt &&
-            (Date.now() - room.trackingSubmittedAt) > MOCK_CARRIER_TRANSIT_MS) {
-            db.collection('rooms').doc(room.id).update({ deliveredAt: Date.now() }).then(() => {
-                db.collection('rooms').doc(room.id).collection('messages').add({
-                    sender: 'system',
-                    text: `📦 [สถานะพัสดุ]: ${room.trackingCarrier === 'thpost' ? 'ไปรษณีย์ไทย' : 'ระบบขนส่ง'} รายงานว่านำจ่ายสำเร็จแล้ว กรุณาตรวจสอบสินค้าและกดยืนยันรับสินค้า`,
-                    timestamp: getFormattedTime(),
-                    clientTimestamp: Date.now(),
-                    serverTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    isSystem: true
-                });
-            }).catch(err => console.warn('Delivery status update failed:', err));
-        }
+        checkDeliveryStatusForRoom(room).catch(err => console.warn('Delivery status check failed:', err));
     });
 }
 
