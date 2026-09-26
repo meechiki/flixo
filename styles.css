@@ -312,7 +312,7 @@ textarea.form-control { resize: vertical; }
 }
 /* Abstract Stripe-like background elements for login-left */
 .login-left::before {
-    content: ''; position: absolute; top: -10%, left: -10%; width: 120%; height: 120%;
+    content: ''; position: absolute; top: -10%; left: -10%; width: 120%; height: 120%;
     background: radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
     z-index: 0;
@@ -372,6 +372,7 @@ textarea.form-control { resize: vertical; }
     color: var(--text-muted); font-weight: 600;
 }
 .phone-input-row input { border: none !important; box-shadow: none !important; border-radius: 0; padding-left: 16px; }
+.phone-input-row input { min-width: 0; flex: 1; }
 
 /* SMS Notification (Mock) */
 .sms-notification-wrapper {
@@ -652,6 +653,7 @@ body:not(.dark-mode) .btn-show-archived:hover {
 }
 .chat-title h3 { font-size: 20px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.02em; }
 .chat-title p { font-size: 14px; color: var(--text-muted); }
+.mobile-chat-back, .mobile-chat-details { display: none; }
 
 .chat-messages {
     flex: 1; padding: 24px 16px; overflow-y: auto;
@@ -1365,6 +1367,124 @@ body.dark-mode .qr-code-box {
     .panel-content { min-height: 600px; }
     .admin-main-grid { grid-template-columns: 1fr; }
     .admin-summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* The portal and workspace adapt independently: the desktop layout stays intact. */
+@media (max-width: 900px) {
+    .login-wrapper { flex-direction: column; }
+    .login-left { flex: none; padding: 30px 24px 24px; }
+    .login-brand { margin: 0; display: grid; grid-template-columns: 44px 1fr; column-gap: 12px; align-items: center; }
+    .login-logo { width: 44px; height: 44px; margin: 0; border-radius: 12px; font-size: 22px; grid-row: span 2; }
+    .login-brand h1 { font-size: 25px; margin: 0; line-height: 1.2; }
+    .login-brand p { font-size: 13px; max-width: none; line-height: 1.4; }
+    .login-brand p br { display: none; }
+    .login-art { display: none; }
+    .login-right { flex: 1; min-width: 0; padding: 80px 24px 32px; align-items: flex-start; }
+    .login-card { max-width: 480px; padding: 32px; margin-inline: auto; }
+    .app-header { padding: 12px 20px; height: auto; flex-wrap: wrap; gap: 12px; }
+    .role-nav { order: 3; width: 100%; justify-content: center; }
+    .header-profile { margin-left: auto; gap: 10px; }
+    .app-main { padding: 20px; }
+    .panel-layout { min-width: 0; }
+    .panel-content { min-width: 0; }
+}
+
+@media (max-width: 600px) {
+    .login-wrapper, .login-left, .login-right { width: 100%; min-width: 0; }
+    .login-left { padding: 18px; }
+    .login-right { padding: 62px 16px 28px; }
+    .login-controls { top: 12px !important; right: 16px !important; }
+    .login-card { padding: 26px 20px; border-radius: 20px; max-width: 440px; }
+    .login-brand { min-width: 0; }
+    .login-brand p { overflow-wrap: anywhere; }
+    .login-header { margin-bottom: 26px; }
+    .login-header h2 { font-size: 24px; }
+    .login-header p { font-size: 14px; }
+    .login-card .btn-large { padding: 12px 16px; min-height: 50px; font-size: 14px; }
+    .login-card .btn-large span { min-width: 0; }
+    .login-card .form-group { margin-bottom: 14px; }
+    #otp-single-input { font-size: 26px !important; letter-spacing: 7px !important; }
+    .phone-prefix { padding: 13px 14px; }
+    .phone-input-row input { padding: 12px !important; font-size: 16px; }
+    .sms-notification-wrapper { left: 12px; right: 12px; top: 12px; }
+    .sms-card { max-width: none; padding: 14px; }
+    #toast-container { left: 12px; right: 12px; bottom: 16px; }
+    .toast { max-width: none; }
+
+    .app-header { padding: 10px 14px; gap: 10px; }
+    .logo-area { gap: 8px; }
+    .logo-text h1 { font-size: 17px; }
+    .logo-icon { width: 32px; height: 32px; }
+    .header-profile { gap: 4px; }
+    .header-profile .profile-info, .header-profile .profile-avatar { display: none; }
+    .role-nav { padding: 4px; gap: 2px; overflow-x: auto; justify-content: flex-start; }
+    .nav-tab { flex: 1 0 auto; justify-content: center; font-size: 12px; padding: 8px 10px; gap: 5px; }
+    .nav-tab .badge { padding: 2px 5px; font-size: 10px; }
+    .simulator-bar { padding: 10px 14px; }
+    .sim-info { flex-wrap: wrap; gap: 5px; }
+    .app-main { padding: 14px; min-width: 0; }
+    .dashboard-welcome-layout { gap: 14px; }
+    .welcome-card, .welcome-kyc-card, .search-result-card { padding: 20px !important; border-radius: 20px; }
+    .welcome-header h2 { font-size: 19px; flex-wrap: wrap; }
+    .deal-search-box { padding: 14px; }
+    .search-input-wrapper { min-width: 0; padding-left: 12px; gap: 6px; }
+    .search-input-wrapper input { min-width: 0; font-size: 16px; }
+    .search-input-wrapper .btn-primary { padding: 10px 12px; }
+    .role-button-grid { grid-template-columns: 1fr; gap: 10px; }
+    .result-user-info { gap: 12px; margin-bottom: 20px; min-width: 0; }
+    .result-details { min-width: 0; overflow-wrap: anywhere; }
+    .bank-info-box .btn-secondary { position: static; margin-top: 14px; }
+    .profile-header-compact { gap: 12px !important; }
+    .profile-avatar-large img { width: 54px !important; height: 54px !important; }
+    .profile-info-compact { min-width: 0; overflow-wrap: anywhere; }
+
+    #panel-deals { height: auto; min-height: calc(100dvh - 160px); }
+    #panel-deals .panel-layout { gap: 12px; }
+    #panel-deals .panel-sidebar { max-height: none; padding: 14px; }
+    #panel-deals .panel-content { min-height: 0; height: min(72dvh, 700px); }
+    #panel-deals .panel-details { padding: 18px; }
+    #panel-deals:not(.mobile-room-open) .panel-content,
+    #panel-deals:not(.mobile-room-open) .panel-details { display: none !important; }
+    #panel-deals.mobile-room-open .panel-sidebar { display: none; }
+    .chat-header { padding: 12px; flex-wrap: wrap; gap: 8px; }
+    .chat-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .chat-title h3 { font-size: 15px; line-height: 1.4; }
+    .chat-title p { font-size: 11px; overflow-wrap: anywhere; }
+    .chat-escrow-status { order: 4; width: 100%; }
+    .mobile-chat-back { display: inline-flex; flex-shrink: 0; }
+    .mobile-chat-details { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: 11px; padding: 8px; }
+    .chat-messages { padding: 14px 8px; min-height: 0; }
+    .msg-bubble { max-width: 88%; overflow-wrap: anywhere; }
+    .system-alert { border-radius: 16px; padding: 10px; max-width: 100%; overflow-wrap: anywhere; }
+    .proposal-item-box { flex-wrap: wrap; }
+    .escrow-compact-row { gap: 8px; align-items: flex-start; }
+    .escrow-compact-val { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+    .chat-input-area { padding: 10px; }
+    .chat-input-area > div { gap: 6px !important; min-width: 0; }
+    .chat-input-area input[type="text"] { min-width: 0; padding: 10px; font-size: 16px; }
+    .chat-input-area .btn-primary, .btn-chat-img, .btn-bell { width: 38px; height: 42px; flex-shrink: 0; }
+
+    .modal-overlay { padding: 12px; }
+    .modal-card { max-height: calc(100dvh - 24px); overflow-y: auto; }
+    .modal-header, .modal-body, .modal-footer { padding: 16px; }
+    .modal-footer { flex-wrap: wrap; }
+    .form-row { flex-wrap: wrap; }
+    .form-row .col-6 { flex: 1 1 100%; }
+    .guide-tabs { overflow-x: auto; }
+    .guide-tab-btn { white-space: nowrap; }
+    .admin-summary-grid { grid-template-columns: 1fr; }
+    .admin-panel-card .card-header { gap: 8px; flex-wrap: wrap; }
+    .admin-table { min-width: 560px; }
+}
+
+@media (max-width: 360px) {
+    .login-right { padding-inline: 12px; }
+    .login-card { padding-inline: 16px; }
+    .login-card .btn-large { padding-inline: 10px; }
+    .login-card .btn-large span { overflow-wrap: anywhere; }
+    .search-input-wrapper { flex-wrap: wrap; border-radius: 16px !important; }
+    .search-input-wrapper .btn-primary { width: 100%; }
+    .chat-input-area .btn-primary, .btn-chat-img, .btn-bell { width: 34px; }
 }
 
 /* Compact Profile */
