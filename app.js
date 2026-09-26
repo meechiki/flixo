@@ -2492,7 +2492,7 @@ function handleAutoResponseSimulation(room, text) {
         } else if (text.includes('โอนแล้ว') || text.includes('จ่ายแล้ว')) {
             room.messages.push({
                 sender: partnerId,
-                text: 'ขอบคุณที่ไว้ใจใช้ FLIXO ครับ! ระบบแจ้งกักยอดแล้ว ข้อมูลไอดีของผมคือ: flixo_pro_game@gmail.com / Pass: Flix8899201 ครับ ลองเข้าระบบไปยืนยันตัวตนเช็คสกินได้เลย',
+                text: 'ขอบคุณที่ไว้ใจใช้ FLIXO ครับ! กรุณาตรวจสอบสถานะการชำระเงินในระบบก่อนดำเนินการส่งมอบสินค้า',
                 timestamp: getFormattedTime(),
                 clientTimestamp: Date.now()
             });
