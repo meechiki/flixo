@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=73">
 </head>
 <body>
     <!-- Facebook SDK for JavaScript -->
@@ -75,7 +75,7 @@
         </div>
         <div class="login-right" style="position: relative;">
             <!-- Minimal Controls Box (Theme & Language) -->
-            <div style="position: absolute; top: 20px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 10px;">
+            <div class="login-controls" style="position: absolute; top: 20px; right: 24px; z-index: 100; display: flex; align-items: center; gap: 10px;">
                 <!-- Theme Toggle Circle Button -->
                 <button type="button" class="theme-circle-btn" id="login-theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode / เปลี่ยนธีม">
                     <i class="fa-solid fa-moon" id="login-theme-icon"></i>
@@ -342,11 +342,13 @@
                     <!-- CENTER: CHAT WINDOW -->
                     <div class="panel-content chat-container">
                         <div class="chat-header" id="user-chat-header">
+                            <button type="button" class="mobile-chat-back btn-icon" onclick="showMobileDealList()" aria-label="กลับไปยังรายการดีล" title="กลับไปยังรายการดีล"><i class="fa-solid fa-arrow-left"></i></button>
                             <div class="chat-title">
                                 <h3 id="active-room-title">เลือกห้องดีลเพื่อเจรจา</h3>
                                 <p id="active-room-subtitle">-</p>
                             </div>
                             <div class="chat-escrow-status" id="active-escrow-badge-container"></div>
+                            <button type="button" class="mobile-chat-details btn-secondary btn-sm" onclick="showMobileDealDetails()" aria-label="ดูรายละเอียดดีล"><i class="fa-solid fa-circle-info"></i> รายละเอียด</button>
                         </div>
                         <div class="chat-messages" id="active-chat-messages">
                             <div class="empty-state">
@@ -1154,6 +1156,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="config.js"></script>
-    <script src="app.js?v=72"></script>
+    <script src="app.js?v=73"></script>
 </body>
 </html>

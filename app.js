@@ -1575,6 +1575,9 @@ function changeAppTab(tab) {
     }
     
     state.activeTab = tab;
+    if (tab === 'deals') {
+        document.getElementById('panel-deals').classList.remove('mobile-room-open');
+    }
     
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
@@ -2010,7 +2013,22 @@ function sendNotifBell() {
 
 function selectRoom(id) {
     state.activeRoomId = id;
+    document.getElementById('panel-deals').classList.add('mobile-room-open');
     updateViews();
+    if (window.matchMedia('(max-width: 600px)').matches) {
+        document.getElementById('panel-deals').scrollIntoView({ block: 'start' });
+    }
+}
+
+function showMobileDealList() {
+    document.getElementById('panel-deals').classList.remove('mobile-room-open');
+}
+
+function showMobileDealDetails() {
+    const details = document.getElementById('active-details-panel');
+    if (details && details.style.display !== 'none') {
+        details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function renderDealChatWindow() {
