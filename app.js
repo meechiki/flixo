@@ -114,11 +114,7 @@ let state = {
     activeDisputeId: null,
     adminDisputeMessages: [],
     
-    // KYC file cache
-    mockFiles: {
-        idCard: null,
-        selfie: null
-    }
+    // KYC evidence is temporary memory in kyc.js.
 };
 
 // Base64 upload cache for dispute
@@ -142,10 +138,10 @@ const MOCK_USERS = [
 
 // Mock Photos for uploads
 const MOCK_PHOTOS = {
-    idCard: 'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?w=400&auto=format&fit=crop&q=60',
-    idCardFail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=60',
-    selfie: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=60',
-    selfieFail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=60',
+
+
+
+
     
     product: {
         game: '🎮',
@@ -958,6 +954,7 @@ function enterMainApp(user) {
     const profileName = document.getElementById('profile-name-display');
     if (profileName) profileName.innerText = `คุณ ${user.name || user.id}`;
     
+    startKycSession();
     // Switch view
     changeAppTab('dashboard');
 
@@ -991,6 +988,7 @@ function enterMainApp(user) {
 }
 
 function resetSessionState() {
+    stopKycSession();
     unsubscribeAllListeners();
     stopPresenceHeartbeat();
     if (adminOnlineCountInterval) { clearInterval(adminOnlineCountInterval); adminOnlineCountInterval = null; }
@@ -1078,19 +1076,7 @@ function initRealtimeListeners() {
             console.error("Rooms listener error:", err);
         });
             
-        // 2. Listen to Admin KYC Requests Queue
-        activeUnsubscribers.kyc = db.collection('kycQueue')
-            .onSnapshot(snapshot => {
-                let queue = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    data.id = doc.id;
-                    queue.push(data);
-                });
-                state.kycQueue = queue;
-                renderAdminPanel();
-            });
-
+        // KYC is accessed only through authenticated callable functions.
         // 3. Listen to Admin Dispute Tickets List
         activeUnsubscribers.disputes = db.collection('disputes')
             .onSnapshot(snapshot => {
@@ -1567,7 +1553,7 @@ function initiateDeal(role) {
 function changeAppTab(tab) {
     // SECURITY ACCESS CONTROL: Only phone 0830158022 or 0831058022 can access admin tab (Frontend protection)
     if (tab === 'admin') {
-        const isAdmin = state.loggedInUser && (state.loggedInUser.phone === '0830158022' || state.loggedInUser.phone === '0831058022');
+        const isAdmin = state.loggedInUser && (kycState.isAdmin || state.loggedInUser.phone === '0830158022' || state.loggedInUser.phone === '0831058022');
         if (!isAdmin) {
             alert('❌ [ความปลอดภัย FLIXO]: ปฏิเสธการเข้าถึง! บัญชีของคุณไม่มีสิทธิ์เข้าใช้งานระบบผู้ดูแลระบบ (Admin Only)');
             return; // Block navigation
@@ -1598,7 +1584,7 @@ function changeAppTab(tab) {
 function updateViews() {
     if (state.loginStep !== 'app') return;
     
-    const isAdmin = state.loggedInUser && (state.loggedInUser.phone === '0830158022' || state.loggedInUser.phone === '0831058022');
+    const isAdmin = state.loggedInUser && (kycState.isAdmin || state.loggedInUser.phone === '0830158022' || state.loggedInUser.phone === '0831058022');
     
     // Toggle Admin Portal tab button visibility in the header dynamically
     const adminTabBtn = document.getElementById('tab-admin');
@@ -1626,6 +1612,7 @@ function updateViews() {
 }
 
 function renderProfileKyc() {
+    applyRealKycStatus();
     const kycBadge = document.getElementById('user-kyc-status');
     const dashboardKycBox = document.getElementById('dashboard-kyc-status-text');
     const dashboardKycBadge = document.getElementById('dashboard-kyc-status-badge');
@@ -1661,7 +1648,7 @@ function renderProfileKyc() {
             dashboardKycBox.className = 'profile-kyc-status-text text-center mt-10 text-warning';
             dashboardKycBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${isEn ? 'Documents under admin review' : 'เอกสารกำลังรอตรวจสอบโดยผู้ดูแลระบบ'}`;
         }
-        if(dashboardKycBtn) dashboardKycBtn.style.display = 'none';
+        if(dashboardKycBtn) { dashboardKycBtn.style.display = 'block'; }
     } else if (state.loggedInUser.kycStatus === 'failed') {
         if(kycBadge) {
             kycBadge.className = 'badge badge-outline status-red';
@@ -3224,121 +3211,9 @@ ${chatHistoryStr ? chatHistoryStr : '(ไม่มีประวัติกา
     }
 }
 
-// e-KYC Uploads
-function openKycModal() {
-    document.getElementById('kyc-id-card-filename').innerText = 'ไม่ได้เลือกไฟล์';
-    document.getElementById('kyc-selfie-filename').innerText = 'ไม่ได้เลือกไฟล์';
-    document.getElementById('kyc-id-card-preview').style.display = 'none';
-    document.getElementById('kyc-selfie-preview').style.display = 'none';
-    const idNumberInput = document.getElementById('kyc-id-number');
-    if (idNumberInput) idNumberInput.value = '';
-    state.mockFiles.idCard = null;
-    state.mockFiles.selfie = null;
-    document.getElementById('modal-kyc').style.display = 'flex';
-}
-
-function openModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.style.display = 'flex';
-}
-
-function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.style.display = 'none';
-}
-
-// Spec 1.3.2.2: real file upload for e-KYC — JPG/JPEG/PNG only, max 5MB.
-// The "force fail" checkbox stays as a labeled demo toggle for exercising the
-// admin-review path; it no longer substitutes a mock stock photo for the
-// user's real upload, it only affects the *simulated review outcome*.
-function handleKycFileSelect(event, type) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!validateImageFile(file)) { event.target.value = ''; return; }
-
-    const filename = document.getElementById(type === 'id-card' ? 'kyc-id-card-filename' : 'kyc-selfie-filename');
-    const preview = document.getElementById(type === 'id-card' ? 'kyc-id-card-preview' : 'kyc-selfie-preview');
-
-    resizeBase64ImageFromFile(file, function(resizedBase64) {
-        if (type === 'id-card') {
-            state.mockFiles.idCard = resizedBase64;
-        } else {
-            state.mockFiles.selfie = resizedBase64;
-        }
-        if (filename) filename.innerText = file.name;
-        if (preview) {
-            preview.style.backgroundImage = `url('${resizedBase64}')`;
-            preview.style.display = 'block';
-        }
-    });
-}
-
-function submitKyc() {
-    const forceFail = document.getElementById('kyc-force-fail').checked;
-    const idNumberInput = document.getElementById('kyc-id-number');
-    const idNumber = idNumberInput ? idNumberInput.value.trim() : '';
-
-    if (!state.mockFiles.idCard || !state.mockFiles.selfie) {
-        alert('กรุณาแนบภาพบัตรประชาชนและภาพถ่าย Selfie คู่บัตรทั้ง 2 ช่อง');
-        return;
-    }
-    if (!/^[0-9]{13}$/.test(idNumber)) {
-        alert('กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก');
-        return;
-    }
-
-    closeModal('modal-kyc');
-
-    state.loggedInUser.kycStatus = 'pending';
-    updateViews();
-
-    setTimeout(() => {
-        if (forceFail) {
-            state.loggedInUser.kycStatus = 'failed';
-
-            const kycSubmission = {
-                user: state.loggedInUser,
-                idCardImg: state.mockFiles.idCard,
-                selfieImg: state.mockFiles.selfie,
-                idNumber: idNumber,
-                aiConfidence: '35% (ความเข้ากันได้ใบหน้าต่ำ)',
-                status: 'pending'
-            };
-            
-            if (isFirebaseEnabled) {
-                db.collection('kycQueue').add(kycSubmission);
-            } else {
-                state.kycQueue.push({ id: state.kycQueue.length + 1, ...kycSubmission });
-            }
-            alert('❌ [e-KYC AI]: สแกนไม่ผ่านเกณฑ์ส่งคำขอของท่านเข้าคิว แอดมินตรวจสอบด้วยตนเองแล้ว');
-        } else {
-            state.loggedInUser.kycStatus = 'verified';
-            // Spec 1.3.2.2: persist name, selfie photo, and ID number for admin review,
-            // restricted-access fields (Spec 1.3.5.3 governs who may read them).
-            if (isFirebaseEnabled) {
-                db.collection('users').doc(state.loggedInUser.id).update({
-                    kycStatus: 'verified',
-                    idNumber: idNumber,
-                    kycSelfieImg: state.mockFiles.selfie
-                });
-            } else {
-                const dbUser = MOCK_USERS.find(u => u.id === state.loggedInUser.id);
-                if (dbUser) {
-                    dbUser.kycStatus = 'verified';
-                    dbUser.idNumber = idNumber;
-                    dbUser.kycSelfieImg = state.mockFiles.selfie;
-                }
-            }
-            alert('✓ [e-KYC AI]: ยืนยันตัวตนสำเร็จ! ปลดล็อกเครื่องมือดีลซื้อขายทั้งหมด');
-        }
-        updateViews();
-        // Prompt user to add bank account info
-        setTimeout(() => {
-            const bankModal = document.getElementById('modal-bank-account');
-            if (bankModal) bankModal.style.display = 'flex';
-        }, 600);
-    }, 1500);
-}
+// Modal helpers; real manual KYC is implemented in kyc.js.
+function openModal(id) { const modal = document.getElementById(id); if (modal) modal.style.display = 'flex'; }
+function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.style.display = 'none'; if (id === 'modal-kyc-review') clearKycEvidence(); }
 
 // ==========================================================================
 // Admin Control Room Logic
@@ -3394,37 +3269,7 @@ function renderAdminPanel() {
         }
     }
     
-    // Render e-KYC Table
-    const kycTbody = document.getElementById('admin-kyc-queue-tbody');
-    if (kycTbody) {
-        let kycHtml = '';
-        const pendingKycQueueList = state.kycQueue.filter(k => k.status === 'pending');
-        if (pendingKycQueueList.length === 0) {
-            kycHtml = `<tr><td colspan="5" class="text-center text-muted" style="padding: 24px;"><i class="fa-solid fa-circle-check" style="color:var(--success); margin-right:6px;"></i> ไม่มีคำขอ KYC ที่รอตรวจสอบ</td></tr>`;
-        } else {
-            pendingKycQueueList.forEach(k => {
-                kycHtml += `
-                    <tr>
-                        <td><strong>${k.user.name}</strong><br><span class="text-muted font-10">ID: ${k.user.id}</span></td>
-                        <td>ดีลซื้อขายทั่วไป</td>
-                        <td>
-                            <div class="mini-doc-preview">
-                                <a href="${k.idCardImg}" target="_blank" class="doc-thumb" title="บัตรประชาชน"><i class="fa-solid fa-address-card"></i></a>
-                                <a href="${k.selfieImg}" target="_blank" class="doc-thumb" title="ภาพถ่ายคู่บัตร"><i class="fa-solid fa-camera"></i></a>
-                            </div>
-                        </td>
-                        <td><span class="badge status-red"><i class="fa-solid fa-shield-halved"></i> ${k.aiConfidence}</span></td>
-                        <td>
-                            <button class="btn-success btn-sm" onclick="adminResolveKyc('${k.id}', true)">อนุมัติ</button>
-                            <button class="btn-danger btn-sm" onclick="adminResolveKyc('${k.id}', false)">ปฏิเสธ</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-        kycTbody.innerHTML = kycHtml;
-    }
-    
+    renderKycQueue();
     // Render Disputes Table
     const disputeTbody = document.getElementById('admin-dispute-tbody');
     if (disputeTbody) {
@@ -3475,29 +3320,6 @@ function renderAdminPanel() {
     }
     
     renderAdminInvestigatorCard();
-}
-
-function adminResolveKyc(requestId, approve) {
-    if (isFirebaseEnabled) {
-        const queueDoc = state.kycQueue.find(k => k.id === requestId);
-        if (!queueDoc) return;
-        
-        db.collection('users').doc(queueDoc.user.id).update({
-            kycStatus: approve ? 'verified' : 'failed'
-        });
-        db.collection('kycQueue').doc(requestId).update({
-            status: approve ? 'approved' : 'rejected'
-        });
-    } else {
-        const kyc = state.kycQueue.find(k => k.id === requestId);
-        if (!kyc) return;
-        kyc.status = approve ? 'approved' : 'rejected';
-        kyc.user.kycStatus = approve ? 'verified' : 'failed';
-        const dbUser = MOCK_USERS.find(u => u.id === kyc.user.id);
-        if (dbUser) dbUser.kycStatus = approve ? 'verified' : 'failed';
-        updateViews();
-    }
-    alert(`แอดมินตัดสินผลตรวจ e-KYC: ${approve ? 'อนุมัติผ่าน' : 'ปฏิเสธคำขอ'}`);
 }
 
 // Select dispute to load its chat messages in real-time for the admin investigator card

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=73">
+    <link rel="stylesheet" href="styles.css?v=74">
 </head>
 <body>
     <!-- Facebook SDK for JavaScript -->
@@ -554,12 +554,12 @@
                             <!-- KYC QUEUE -->
                             <div class="admin-panel-card">
                                 <div class="card-header">
-                                    <h3><i class="fa-solid fa-passport" style="color:var(--warning);"></i> คิวตรวจสอบ e-KYC</h3>
+<h3>คิวตรวจ e-KYC (สูงสุด 25 รายการ)</h3><button class="btn-secondary btn-sm" onclick="refreshKycQueue()">รีเฟรช</button><button id="kyc-queue-next" class="btn-secondary btn-sm" onclick="refreshKycQueue(true)" hidden>หน้าถัดไป</button>
                                 </div>
                                 <div class="card-body">
                                     <div class="admin-table-container">
                                         <table class="admin-table">
-                                            <thead><tr><th>ผู้ยื่นคำขอ</th><th>บทบาท</th><th>หลักฐาน</th><th>ผล AI</th><th>ดำเนินการ</th></tr></thead>
+<thead><tr><th>ผู้ยื่นคำขอ</th><th>เวลาส่ง</th><th>หลักฐาน</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
                                             <tbody id="admin-kyc-queue-tbody">
                                                 <tr><td colspan="5" class="text-center text-muted" style="padding: 30px;">ไม่มีคำขอ KYC ที่รอตรวจสอบ</td></tr>
                                             </tbody>
@@ -823,56 +823,8 @@
         </div>
     </div>
 
-    <!-- MODAL: e-KYC -->
-    <div class="modal-overlay" id="modal-kyc">
-        <div class="modal-card modal-md">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-id-card"></i> ยืนยันตัวตน e-KYC</h2>
-                <button class="close-btn" onclick="closeModal('modal-kyc')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-desc">อัปโหลดบัตรประชาชนและรูปถ่ายเพื่อยืนยันสิทธิ์ในระบบ FLIXO</p>
-                <div class="form-group">
-                    <label for="kyc-id-number">เลขประจำตัวประชาชน (13 หลัก) <span class="req">*</span></label>
-                    <input type="text" id="kyc-id-number" placeholder="เช่น 1234567890123" maxlength="13" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)">
-                </div>
-                <div class="kyc-upload-grid">
-                    <div class="kyc-upload-box">
-                        <div class="upload-icon"><i class="fa-solid fa-address-card"></i></div>
-                        <span>ภาพหน้าบัตรประชาชน</span>
-                        <div class="sim-file-input">
-                            <input type="file" id="kyc-id-card-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleKycFileSelect(event, 'id-card')">
-                            <button class="btn-secondary btn-sm" onclick="document.getElementById('kyc-id-card-file-input').click()">เลือกรูปภาพ (JPG/PNG, ไม่เกิน 5MB)</button>
-                            <span id="kyc-id-card-filename" class="file-name-text">ไม่ได้เลือกไฟล์</span>
-                        </div>
-                        <div class="preview-img-container" id="kyc-id-card-preview" style="display: none;"></div>
-                    </div>
-                    <div class="kyc-upload-box">
-                        <div class="upload-icon"><i class="fa-solid fa-camera"></i></div>
-                        <span>รูปถ่าย Selfie คู่บัตร</span>
-                        <div class="sim-file-input">
-                            <input type="file" id="kyc-selfie-file-input" accept="image/jpeg,image/jpg,image/png" style="display:none" onchange="handleKycFileSelect(event, 'selfie')">
-                            <button class="btn-secondary btn-sm" onclick="document.getElementById('kyc-selfie-file-input').click()">เลือกรูปภาพ (JPG/PNG, ไม่เกิน 5MB)</button>
-                            <span id="kyc-selfie-filename" class="file-name-text">ไม่ได้เลือกไฟล์</span>
-                        </div>
-                        <div class="preview-img-container" id="kyc-selfie-preview" style="display: none;"></div>
-                    </div>
-                </div>
-                <div class="e-kyc-options mt-20">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="kyc-force-fail">
-                        <span><strong>จำลองพิเศษ:</strong> บังคับให้ AI ตรวจสอบไม่ผ่าน (ส่งต่อแอดมิน)</span>
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal('modal-kyc')">ยกเลิก</button>
-                <button class="btn-primary" onclick="submitKyc()">
-                    <i class="fa-solid fa-arrow-up-from-bracket"></i> ส่งตรวจและยืนยัน
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Manual KYC dialogs are mounted by kyc.js before DOMContentLoaded. -->
+    <div id="kyc-dialogs"></div>
 
     <!-- MODAL: Bank Account (after KYC) -->
     <div class="modal-overlay" id="modal-bank-account">
@@ -1156,6 +1108,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="config.js"></script>
-    <script src="app.js?v=73"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+    <script src="app.js?v=74"></script>
+    <script src="kyc.js?v=1"></script>
 </body>
 </html>
