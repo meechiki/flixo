@@ -1,0 +1,7 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only callable functions using the Admin SDK may access this database.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

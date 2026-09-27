@@ -1,0 +1,4 @@
+{
+  "functions": [{ "source": "kyc-functions", "codebase": "kyc" }],
+  "firestore": [{ "database": "flixo-kyc", "rules": "kyc-private.rules" }]
+}

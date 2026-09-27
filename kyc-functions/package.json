@@ -1,0 +1,8 @@
+{
+  "name": "flixo-manual-kyc",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "scripts": { "test": "node --test validation.test.js" },
+  "dependencies": { "firebase-admin": "^13.0.0", "firebase-functions": "^6.0.0", "sharp": "^0.33.5" }
+}
