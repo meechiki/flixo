@@ -1,41 +1,5 @@
 /* Manual identity review. Decisions come only from authenticated callables. */
 const kycState = { status: 'unverified', reason: '', step: 0, images: {}, versions: {}, busy: false, timer: null, generation: 0, isAdmin: false, requestId: null, cursor: null };
-document.getElementById('kyc-dialogs').innerHTML = `
-<div class="modal-overlay" id="modal-kyc" role="dialog" aria-modal="true" aria-labelledby="kyc-step-heading">
- <div class="modal-card modal-lg kyc-modal">
-  <div class="modal-header"><div><span class="kyc-eyebrow">FLIXO · IDENTITY</span><h2 id="kyc-step-heading" tabindex="-1">ยืนยันตัวตนของคุณ</h2></div><button id="kyc-close" class="close-btn" onclick="closeKycModal()" aria-label="ปิด">&times;</button></div>
-  <div class="modal-body">
-   <ol class="kyc-progress"><li>1 ข้อมูล</li><li>2 รูปภาพ</li><li>3 ตรวจทาน</li></ol>
-   <p class="kyc-notice">ตรวจเอกสารโดยผู้ดูแลระบบ ไม่ใช่การตรวจใบหน้าหรือความมีชีวิตอัตโนมัติ</p>
-   <p id="kyc-status-message" class="kyc-status" role="status" hidden></p>
-   <form id="kyc-form" onsubmit="event.preventDefault()">
-    <section data-kyc-step="0"><h3>เตรียมบัตรประชาชนตัวจริง</h3><p class="modal-desc">ใช้ข้อมูลของคุณเอง ชื่อและเลขบัตรต้องตรงกับเอกสาร</p>
-     <div class="form-group"><label for="kyc-full-name">ชื่อ–นามสกุลตามบัตร</label><input id="kyc-full-name" type="text" autocomplete="name" minlength="3" maxlength="160" required placeholder="ชื่อและนามสกุล"></div>
-     <div class="form-group"><label for="kyc-id-number">เลขประจำตัวประชาชน 13 หลัก</label><input id="kyc-id-number" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]{13}" maxlength="13" required placeholder="กรอกตัวเลข 13 หลัก"></div>
-     <p class="form-help">การตรวจรูปแบบเลขบัตรไม่ได้ยืนยันว่าบัตรเป็นของจริง ผู้ดูแลจะตรวจหลักฐานอีกครั้ง</p>
-    </section>
-    <section data-kyc-step="1" hidden><h3>แนบภาพที่อ่านได้ชัดเจน</h3><p class="modal-desc">JPG หรือ PNG ไม่เกิน 5 MB ต่อภาพ ไม่ใช้ภาพหน้าจอหรือภาพที่แก้ไขข้อมูล</p>
-     <div class="kyc-upload-grid">
-      <div class="kyc-upload-box"><div class="upload-icon"><i class="fa-solid fa-id-card"></i></div><label for="kyc-id-card-file-input">ด้านหน้าบัตรประชาชน</label><p>เห็นครบ 4 มุม ไม่มีแสงสะท้อน ไม่ต้องส่งด้านหลังหรือเลข Laser</p><input id="kyc-id-card-file-input" type="file" accept="image/jpeg,image/png" capture="environment" onchange="handleKycFileSelect(event,'id-card')"><span id="kyc-id-card-filename">ยังไม่ได้เลือกภาพ</span><img id="kyc-id-card-preview" alt="ตัวอย่างภาพบัตร" hidden></div>
-      <div class="kyc-upload-box"><div class="upload-icon"><i class="fa-solid fa-camera"></i></div><label for="kyc-selfie-file-input">ใบหน้าพร้อมถือบัตร</label><p>เห็นใบหน้าและบัตรชัด ไม่ใส่หน้ากากหรือแว่นกันแดด ถ่ายในที่สว่าง</p><input id="kyc-selfie-file-input" type="file" accept="image/jpeg,image/png" capture="user" onchange="handleKycFileSelect(event,'selfie')"><span id="kyc-selfie-filename">ยังไม่ได้เลือกภาพ</span><img id="kyc-selfie-preview" alt="ตัวอย่างภาพใบหน้าพร้อมบัตร" hidden></div>
-     </div>
-    </section>
-    <section data-kyc-step="2" hidden><h3>ตรวจสอบก่อนส่ง</h3><dl class="kyc-summary"><dt>ชื่อ–นามสกุล</dt><dd id="kyc-review-name"></dd><dt>เลขประจำตัวประชาชน</dt><dd id="kyc-review-id"></dd></dl>
-     <div class="kyc-review-images"><img id="kyc-review-idCard" alt="ภาพบัตรที่จะส่ง"><img id="kyc-review-selfie" alt="ภาพใบหน้าที่จะส่ง"></div>
-     <div class="kyc-notice"><strong>เอกสารใช้เพื่ออะไร?</strong><p>ใช้ประกอบการตรวจยืนยันตัวตนโดยผู้ดูแลที่ได้รับสิทธิ์ ภาพและเลขบัตรไม่แสดงให้คู่ซื้อขายเห็น หากไม่ผ่าน คุณจะเห็นเหตุผลและส่งใหม่ได้ รูปและข้อมูลในคำขอจะถูกลบตามรอบรายวันเมื่อครบ 30 วันนับจากส่ง ส่วนผลตรวจและประวัติการดำเนินการเก็บแยกจากรูป</p><button type="button" class="btn-link" onclick="openConsentWizard(2)">อ่านนโยบายความเป็นส่วนตัว</button></div>
-     <label class="kyc-consent"><input id="kyc-consent" type="checkbox"><span>ฉันยืนยันว่าข้อมูลและเอกสารเป็นของฉัน และรับทราบการใช้ข้อมูลเพื่อให้ผู้ดูแลตรวจสอบตัวตน</span></label>
-    </section>
-   </form><p id="kyc-error" role="alert" class="kyc-error"></p>
-  </div>
-  <div class="modal-footer"><button class="btn-secondary" onclick="refreshKycStatus()">ตรวจสถานะ</button><button id="kyc-back" class="btn-secondary" onclick="kycNext(-1)">ย้อนกลับ</button><button id="kyc-next" class="btn-primary" onclick="kycNext(1)">ถัดไป</button><button id="kyc-submit" class="btn-primary" onclick="submitKyc()" hidden>ส่งให้ผู้ดูแลตรวจสอบ</button></div>
- </div>
-</div>
-<div class="modal-overlay" id="modal-kyc-review" role="dialog" aria-modal="true" aria-labelledby="kyc-review-heading">
- <div class="modal-card modal-lg kyc-modal"><div class="modal-header"><h2 id="kyc-review-heading">ตรวจเอกสารยืนยันตัวตน</h2><button class="close-btn" onclick="closeModal('modal-kyc-review')" aria-label="ปิด">&times;</button></div>
-  <div class="modal-body"><p id="kyc-evidence-name"></p><p id="kyc-evidence-id"></p><div class="kyc-review-images"><img id="kyc-evidence-0" alt="บัตรประชาชน"><img id="kyc-evidence-1" alt="ใบหน้าพร้อมบัตร"></div><p>ตรวจชื่อ เลขบัตร วันหมดอายุ ความชัดเจน และภาพใบหน้าว่าสอดคล้องกัน หากข้อมูลไม่พอให้ขอส่งใหม่</p><label class="kyc-consent"><input type="checkbox" id="kyc-reviewed"><span>ตรวจภาพและข้อมูลครบแล้ว พร้อมบันทึกผลโดยใช้สิทธิ์ของฉัน</span></label><label for="kyc-reject-reason">เหตุผลที่ให้ผู้ใช้แก้ไข (จำเป็นเมื่อปฏิเสธ)</label><textarea id="kyc-reject-reason" rows="3" maxlength="500" placeholder="เช่น ภาพบัตรสะท้อนแสง อ่านเลขบัตรไม่ได้"></textarea><p id="kyc-review-error" class="kyc-error" role="alert"></p></div>
-  <div class="modal-footer"><button class="btn-danger" onclick="adminResolveKyc(false)">ขอให้ส่งใหม่</button><button class="btn-success" onclick="adminResolveKyc(true)">อนุมัติ</button></div>
- </div>
-</div>`;
 async function kycCall(name, data = {}) {
     if (!auth?.currentUser || auth.currentUser.isAnonymous) throw new Error('กรุณาเข้าสู่ระบบด้วย Google หรือบัญชีที่ยืนยันแล้วก่อนส่งเอกสาร');
     return (await firebase.app().functions('asia-southeast1').httpsCallable(name)(data)).data;
@@ -76,6 +40,7 @@ async function refreshKycStatus() {
         const result = await kycCall('kycStatus');
         if (generation !== kycState.generation || !state.loggedInUser) return;
         kycState.status = result.status;
+        kycState.submissionId = result.requestId;
         kycState.reason = result.reason || '';
         kycState.serviceError = '';
         const token = await auth.currentUser.getIdTokenResult();
@@ -107,12 +72,15 @@ function openKycModal() {
     for (const key of ['id-card', 'selfie']) {
         const preview = document.getElementById(`kyc-${key}-preview`);
         preview.removeAttribute('src'); preview.hidden = true;
-        document.getElementById(`kyc-${key}-filename`).textContent = 'ยังไม่ได้เลือกภาพ';
+        document.getElementById(`kyc-drop-${key}`).classList.remove('has-image');
+        document.getElementById(`kyc-${key}-action`).textContent = 'ถ่ายรูปหรือเลือกภาพ';
+        document.getElementById(`kyc-${key}-filename`).textContent = 'JPG / PNG · ไม่เกิน 5 MB';
     }
     document.getElementById('kyc-error').textContent = '';
     openModal('modal-kyc');
     renderKycStep();
     refreshKycStatus();
+    document.getElementById('kyc-full-name').focus();
 }
 function closeKycModal() {
     if (kycState.busy) return;
@@ -128,36 +96,61 @@ function renderKycStep() {
     document.querySelectorAll('[data-kyc-step]').forEach(el => { el.hidden = statusOnly || Number(el.dataset.kycStep) !== kycState.step; });
     document.querySelectorAll('.kyc-progress li').forEach((el, i) => {
         el.classList.toggle('current', i === kycState.step);
+        el.classList.toggle('complete', statusOnly || i < kycState.step);
         el.setAttribute('aria-current', i === kycState.step ? 'step' : 'false');
     });
     const box = document.getElementById('kyc-status-message');
-    box.hidden = !statusOnly && kycState.status !== 'rejected' && !kycState.serviceError;
+    box.hidden = statusOnly || (kycState.status !== 'rejected' && !kycState.serviceError);
     box.textContent = kycState.serviceError || ({ approved: 'ยืนยันตัวตนแล้ว • ตรวจสอบโดยผู้ดูแลระบบ', pending: 'ได้รับเอกสารแล้ว • กำลังรอผู้ดูแลตรวจสอบ คุณกลับมาเช็กสถานะได้ภายหลัง', uploading: 'กำลังรับเอกสาร กรุณาตรวจสอบสถานะอีกครั้ง', rejected: `กรุณาแก้ไขและส่งใหม่: ${kycState.reason}` })[kycState.status] || '';
     document.getElementById('kyc-back').hidden = statusOnly || kycState.step === 0;
-    document.getElementById('kyc-next').hidden = statusOnly || kycState.step === 2;
-    document.getElementById('kyc-submit').hidden = statusOnly || kycState.step !== 2;
+    document.getElementById('kyc-next').hidden = statusOnly || kycState.step === 3;
+    document.getElementById('kyc-submit').hidden = statusOnly || kycState.step !== 3;
     document.getElementById('kyc-submit').disabled = kycState.busy || Boolean(kycState.serviceError);
-    document.getElementById('kyc-submit').textContent = kycState.busy ? 'กำลังส่งเอกสาร…' : 'ส่งให้ผู้ดูแลตรวจสอบ';
+    document.getElementById('kyc-submit').textContent = kycState.busy ? 'กำลังส่งเอกสาร…' : 'ส่งยืนยันตัวตน';
     document.getElementById('kyc-close').disabled = kycState.busy;
     document.getElementById('kyc-back').disabled = kycState.busy;
+    document.getElementById('kyc-step-count').textContent = statusOnly ? 'สถานะการยืนยันตัวตน' : `ขั้นตอน ${kycState.step + 1} / 4`;
+    document.getElementById('kyc-status-refresh').hidden = !statusOnly && !kycState.serviceError;
+    document.getElementById('kyc-done').hidden = !statusOnly;
+    document.getElementById('kyc-footer-note').hidden = statusOnly || kycState.step > 0;
+    document.getElementById('kyc-result').hidden = !statusOnly;
+    if (statusOnly) {
+        const approved = kycState.status === 'approved';
+        document.getElementById('kyc-result-icon').innerHTML = approved ? '<i class="fa-solid fa-check" aria-hidden="true"></i>' : '<i class="fa-regular fa-clock" aria-hidden="true"></i>';
+        document.getElementById('kyc-result-title').textContent = approved ? 'ยืนยันตัวตนเรียบร้อย' : kycState.status === 'uploading' ? 'กำลังรับเอกสารของคุณ' : 'ได้รับเอกสารแล้ว';
+        document.getElementById('kyc-result-copy').textContent = approved ? 'ผู้ดูแลตรวจสอบเอกสารแล้ว คุณกลับไปเริ่มต้นซื้อขายได้เลย' : 'ผู้ดูแลจะตรวจสอบข้อมูลและรูปภาพ คุณปิดหน้านี้และกลับมาเช็กผลได้ภายหลัง';
+        document.getElementById('kyc-result-reference').textContent = kycState.submissionId ? `เลขคำขอ · ${kycState.submissionId}` : 'สถานะจะอัปเดตเมื่อมีผลตรวจ';
+    }
 }
 function kycNext(direction) {
+    if (kycState.busy || ['approved', 'pending', 'uploading'].includes(kycState.status)) return;
     document.getElementById('kyc-error').textContent = '';
     if (direction > 0) {
         if (kycState.step === 0 && !document.getElementById('kyc-form').reportValidity()) return;
         if (kycState.step === 0 && !kycValidId(document.getElementById('kyc-id-number').value)) {
             document.getElementById('kyc-error').textContent = 'เลขบัตรไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'; return;
         }
-        if (kycState.step === 1 && (!kycState.images.idCard || !kycState.images.selfie)) {
-            document.getElementById('kyc-error').textContent = 'กรุณาแนบภาพให้ครบและรอประมวลผลภาพ'; return;
+        if ((kycState.step === 1 && !kycState.images.idCard) || (kycState.step === 2 && !kycState.images.selfie)) {
+            document.getElementById('kyc-error').textContent = 'เลือกภาพและรอให้ภาพตัวอย่างแสดงก่อนดำเนินการต่อ'; return;
         }
     }
-    kycState.step = Math.max(0, Math.min(2, kycState.step + direction));
+    kycState.step = Math.max(0, Math.min(3, kycState.step + direction));
     document.getElementById('kyc-review-name').textContent = document.getElementById('kyc-full-name').value;
     document.getElementById('kyc-review-id').textContent = document.getElementById('kyc-id-number').value.replace(/^\d{9}/, '•••••••••');
     for (const type of ['idCard', 'selfie']) document.getElementById(`kyc-review-${type}`).src = kycState.images[type] || '';
     renderKycStep();
-    document.getElementById('kyc-step-heading').focus();
+    const heading = document.querySelector(`[data-kyc-step="${kycState.step}"] h3`);
+    heading.setAttribute('tabindex', '-1'); heading.focus();
+    document.querySelector('#modal-kyc .kyc-scroll-body').scrollTop = 0;
+}
+function kycGoTo(step) {
+    if (kycState.busy || step < 0 || step > 2) return;
+    kycState.step = step; renderKycStep();
+    document.querySelector('#modal-kyc .kyc-scroll-body').scrollTop = 0;
+}
+function kycZoomEvidence(index) {
+    const image = document.getElementById(`kyc-evidence-${index}`);
+    image.closest('figure').classList.toggle('expanded');
 }
 function kycValidId(value) {
     if (!/^[1-9]\d{12}$/.test(value) || /^(\d)\1{12}$/.test(value)) return false;
@@ -171,6 +164,7 @@ async function handleKycFileSelect(event, type) {
     delete kycState.images[key];
     const preview = document.getElementById(`kyc-${type}-preview`);
     preview.hidden = true; preview.removeAttribute('src');
+    document.getElementById(`kyc-drop-${type}`).classList.remove('has-image');
     const label = document.getElementById(`kyc-${type}-filename`);
     label.textContent = 'ยังไม่ได้เลือกภาพ';
     if (!file || !validateImageFile(file)) { event.target.value = ''; return; }
@@ -189,6 +183,8 @@ async function handleKycFileSelect(event, type) {
         if (generation !== kycState.generation || kycState.versions[key] !== version) return;
         kycState.images[key] = data;
         preview.src = data; preview.hidden = false; label.textContent = file.name;
+        document.getElementById(`kyc-drop-${type}`).classList.add('has-image');
+        document.getElementById(`kyc-${type}-action`).textContent = 'เปลี่ยนภาพ';
     } catch (error) {
         if (generation === kycState.generation && kycState.versions[key] === version) {
             label.textContent = 'ใช้ภาพนี้ไม่ได้';
@@ -206,7 +202,7 @@ async function submitKyc() {
     try {
         const result = await kycCall('kycSubmit', { fullName: document.getElementById('kyc-full-name').value.trim(), idNumber: document.getElementById('kyc-id-number').value, idCard: kycState.images.idCard, selfie: kycState.images.selfie, consent: true });
         if (generation !== kycState.generation || !state.loggedInUser) return;
-        kycState.status = result.status; kycState.images = {};
+        kycState.status = result.status; kycState.submissionId = result.requestId; kycState.images = {};
         document.getElementById('kyc-form').reset();
         document.querySelectorAll('#modal-kyc img').forEach(img => img.removeAttribute('src'));
         document.getElementById('kyc-error').textContent = '';
@@ -244,6 +240,7 @@ function renderKycQueue() {
     document.getElementById('kyc-queue-next').hidden = !kycState.cursor;
 }
 function clearKycEvidence() {
+    document.querySelectorAll('#modal-kyc-review figure').forEach(el => el.classList.remove('expanded'));
     document.querySelectorAll('#modal-kyc-review img').forEach(img => img.removeAttribute('src'));
     document.getElementById('kyc-evidence-id')?.replaceChildren();
     document.getElementById('kyc-evidence-name')?.replaceChildren();
