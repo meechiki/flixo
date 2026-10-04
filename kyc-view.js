@@ -52,7 +52,7 @@ document.getElementById('kyc-dialogs').innerHTML = `
     </form>
     <p id="kyc-error" role="alert" class="kyc-error" tabindex="-1"></p>
    </div>
-   <footer class="kyc-footer"><span class="kyc-footer-note" id="kyc-footer-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> ตรวจสอบโดยผู้ดูแล</span><button id="kyc-back" class="kyc-back" onclick="kycNext(-1)">ย้อนกลับ</button><button id="kyc-next" class="kyc-primary" onclick="kycNext(1)">ถัดไป <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button><button id="kyc-submit" class="kyc-primary" onclick="submitKyc()" hidden>ส่งยืนยันตัวตน</button><button id="kyc-status-refresh" class="kyc-back" onclick="refreshKycStatus()" hidden>ตรวจสถานะอีกครั้ง</button><button id="kyc-done" class="kyc-primary" onclick="closeKycModal()" hidden>กลับหน้าหลัก</button></footer>
+   <footer class="kyc-footer"><span class="kyc-footer-note" id="kyc-footer-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> ตรวจสอบโดยผู้ดูแล</span><button id="kyc-back" class="kyc-back" onclick="kycNext(-1)">ย้อนกลับ</button><button id="kyc-next" class="kyc-primary" onclick="kycNext(1)">ถัดไป <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button><button id="kyc-submit" class="kyc-primary" onclick="submitKyc()" hidden>ส่งยืนยันตัวตน</button><button id="kyc-login" class="kyc-primary" onclick="kycGoToLogin()" hidden>ไปเข้าสู่ระบบด้วย Google</button><button id="kyc-status-refresh" class="kyc-back" onclick="refreshKycStatus()" hidden>ตรวจสถานะอีกครั้ง</button><button id="kyc-done" class="kyc-primary" onclick="closeKycModal()" hidden>กลับหน้าหลัก</button></footer>
   </div>
  </div>
 </div>
