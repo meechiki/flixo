@@ -14,22 +14,22 @@ Backend code is prepared but has NOT been deployed or tested against this Fireba
 
 1. Use the existing Firebase project `project-flixo-app`. Confirm billing and Cloud Functions availability with the owner before enabling paid services. Install the official Firebase CLI and authenticate locally. Never commit service-account files or tokens.
 2. Create a **named Firestore database** `flixo-kyc`, ideally near `asia-southeast1`. Deploy `kyc-private.rules` to that database ONLY. It denies every browser read/write; callable functions use the Admin SDK. Do not replace the existing app database's rules with this file.
-3. Create a **dedicated private Cloud Storage bucket**, separate from existing application uploads. Enable uniform bucket-level access and enforced public access prevention. Give only the deployed functions service account object read/write/delete permissions. No `allUsers`, `allAuthenticatedUsers`, download tokens or public URLs. Do not configure a public bucket as `KYC_BUCKET`. Client Storage rules must deny all if the bucket is also registered with Firebase Storage.
+3. Use the project's existing default Firebase Storage bucket, `project-flixo-app.firebasestorage.app` (the name configured in `app.js`). First verify that this bucket actually exists in Firebase Console > Storage. The backend uses the Admin SDK, while `kyc-storage.rules` denies every client read/write. **Review the currently deployed Storage rules before deploying:** this repository has no other client Storage usage, but deploying these rules replaces the existing bucket rules and would block any external clients using that bucket. If those clients exist, preserve their rules in a reviewed combined ruleset and keep KYC evidence inaccessible; a narrower deny cannot override an overlapping allow rule. Verify no public IAM grants, download tokens or public URLs; ensure the deployed functions service account has only the object permissions it needs. Do not enable intake until these checks pass.
 4. Inside `kyc-functions`, run `npm install` and `npm test`. Dependencies need to be resolved and locked in the deployment environment; dependency installation was not performed during authoring. The included tests exercise function logic with in-memory infrastructure doubles, not a live Firebase project or security-rules emulator.
 5. Create untracked `kyc-functions/.env.project-flixo-app` containing:
 
    ```env
    KYC_ENABLED=false
-   KYC_BUCKET=YOUR_DEDICATED_PRIVATE_BUCKET_NAME
+   KYC_BUCKET=project-flixo-app.firebasestorage.app
    ```
 
 6. From the repo root deploy the isolated codebase and database rules:
 
    ```sh
-   firebase deploy --project project-flixo-app --config firebase.kyc.json --only functions:kyc,firestore
+   firebase deploy --project project-flixo-app --config firebase.kyc.json --only functions:kyc,firestore,storage
    ```
 
-   Ensure the functions service account can access the named database and private bucket. The scheduled cleanup requires Cloud Scheduler. Do not enable intake unless the cleanup job is deployed and healthy.
+   Ensure the functions service account can access the named database and default Storage bucket. The scheduled cleanup requires Cloud Scheduler. Do not enable intake unless the cleanup job is deployed and healthy.
 7. In a trusted Admin SDK environment, grant `kycAdmin: true` to the **Firebase Authentication UID** of the chosen reviewer, preserving existing claims:
 
    ```js
@@ -45,7 +45,7 @@ Backend code is prepared but has NOT been deployed or tested against this Fireba
 
 - Unauthenticated, anonymous and ordinary users cannot call reviewer endpoints.
 - Direct client reads/writes of all documents in `flixo-kyc` fail, including statuses and audit records.
-- Private bucket objects are inaccessible without server IAM credentials; no public token URLs exist.
+- Default bucket KYC objects are inaccessible without server IAM credentials; no public token URLs exist. Client Storage access to all paths is denied by the deployed rules.
 - A real authenticated applicant submits readable test images; status stays pending across reloads.
 - The privileged reviewer can open both images, approve/reject, and the applicant receives the real result (refresh or within 30 seconds while visible).
 - Rejection requires a reason; resubmission works. Self-review, replay decisions, duplicate submission and concurrent approvals are rejected.
