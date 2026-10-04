@@ -93,6 +93,8 @@ function closeKycModal() {
 }
 function renderKycStep() {
     const statusOnly = ['approved', 'pending', 'uploading'].includes(kycState.status);
+    const needsLogin = !auth?.currentUser || auth.currentUser.isAnonymous;
+    document.getElementById('kyc-form').hidden = needsLogin || statusOnly;
     document.querySelectorAll('[data-kyc-step]').forEach(el => { el.hidden = statusOnly || Number(el.dataset.kycStep) !== kycState.step; });
     document.querySelectorAll('.kyc-progress li').forEach((el, i) => {
         el.classList.toggle('current', i === kycState.step);
@@ -100,19 +102,20 @@ function renderKycStep() {
         el.setAttribute('aria-current', i === kycState.step ? 'step' : 'false');
     });
     const box = document.getElementById('kyc-status-message');
-    box.hidden = statusOnly || (kycState.status !== 'rejected' && !kycState.serviceError);
-    box.textContent = kycState.serviceError || ({ approved: 'ยืนยันตัวตนแล้ว • ตรวจสอบโดยผู้ดูแลระบบ', pending: 'ได้รับเอกสารแล้ว • กำลังรอผู้ดูแลตรวจสอบ คุณกลับมาเช็กสถานะได้ภายหลัง', uploading: 'กำลังรับเอกสาร กรุณาตรวจสอบสถานะอีกครั้ง', rejected: `กรุณาแก้ไขและส่งใหม่: ${kycState.reason}` })[kycState.status] || '';
-    document.getElementById('kyc-back').hidden = statusOnly || kycState.step === 0;
-    document.getElementById('kyc-next').hidden = statusOnly || kycState.step === 3;
-    document.getElementById('kyc-submit').hidden = statusOnly || kycState.step !== 3;
+    box.hidden = statusOnly || (!needsLogin && kycState.status !== 'rejected' && !kycState.serviceError);
+    box.textContent = needsLogin ? 'ต้องเข้าสู่ระบบด้วย Google หรือบัญชี Firebase ที่ยืนยันแล้วก่อนส่งเอกสาร กรุณาเข้าสู่ระบบก่อนเริ่มกรอกข้อมูล' : kycState.serviceError || ({ approved: 'ยืนยันตัวตนแล้ว • ตรวจสอบโดยผู้ดูแลระบบ', pending: 'ได้รับเอกสารแล้ว • กำลังรอผู้ดูแลตรวจสอบ คุณกลับมาเช็กสถานะได้ภายหลัง', uploading: 'กำลังรับเอกสาร กรุณาตรวจสอบสถานะอีกครั้ง', rejected: `กรุณาแก้ไขและส่งใหม่: ${kycState.reason}` })[kycState.status] || '';
+    document.getElementById('kyc-back').hidden = statusOnly || needsLogin || kycState.step === 0;
+    document.getElementById('kyc-next').hidden = statusOnly || needsLogin || kycState.step === 3;
+    document.getElementById('kyc-submit').hidden = statusOnly || needsLogin || kycState.step !== 3;
+    document.getElementById('kyc-login').hidden = statusOnly || !needsLogin;
     document.getElementById('kyc-submit').disabled = kycState.busy || Boolean(kycState.serviceError);
     document.getElementById('kyc-submit').textContent = kycState.busy ? 'กำลังส่งเอกสาร…' : 'ส่งยืนยันตัวตน';
     document.getElementById('kyc-close').disabled = kycState.busy;
     document.getElementById('kyc-back').disabled = kycState.busy;
     document.getElementById('kyc-step-count').textContent = statusOnly ? 'สถานะการยืนยันตัวตน' : `ขั้นตอน ${kycState.step + 1} / 4`;
-    document.getElementById('kyc-status-refresh').hidden = !statusOnly && !kycState.serviceError;
+    document.getElementById('kyc-status-refresh').hidden = needsLogin || (!statusOnly && !kycState.serviceError);
     document.getElementById('kyc-done').hidden = !statusOnly;
-    document.getElementById('kyc-footer-note').hidden = statusOnly || kycState.step > 0;
+    document.getElementById('kyc-footer-note').hidden = statusOnly || needsLogin || kycState.step > 0;
     document.getElementById('kyc-result').hidden = !statusOnly;
     if (statusOnly) {
         const approved = kycState.status === 'approved';
@@ -124,6 +127,7 @@ function renderKycStep() {
 }
 function kycNext(direction) {
     if (kycState.busy || ['approved', 'pending', 'uploading'].includes(kycState.status)) return;
+    if (direction > 0 && (!auth?.currentUser || auth.currentUser.isAnonymous)) { renderKycStep(); return; }
     document.getElementById('kyc-error').textContent = '';
     if (direction > 0) {
         if (kycState.step === 0 && !document.getElementById('kyc-form').reportValidity()) return;
@@ -142,6 +146,14 @@ function kycNext(direction) {
     const heading = document.querySelector(`[data-kyc-step="${kycState.step}"] h3`);
     heading.setAttribute('tabindex', '-1'); heading.focus();
     document.querySelector('#modal-kyc .kyc-scroll-body').scrollTop = 0;
+}
+async function kycGoToLogin() {
+    if (kycState.busy) return;
+    closeKycModal();
+    try { localStorage.removeItem('flixo_saved_session'); } catch (_) {}
+    try { await auth?.signOut(); } catch (_) {}
+    resetSessionState();
+    document.getElementById('btn-login-google')?.focus();
 }
 function kycGoTo(step) {
     if (kycState.busy || step < 0 || step > 2) return;
