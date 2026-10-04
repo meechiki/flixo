@@ -17,6 +17,7 @@ function stopKycSession() {
     kycState.versions = {};
     kycState.isAdmin = false;
     kycState.serviceError = '';
+    kycState.serviceChecked = false;
     document.querySelectorAll('#modal-kyc img').forEach(img => img.removeAttribute('src'));
     document.getElementById('kyc-form').reset();
     document.getElementById('modal-kyc').style.display = 'none';
@@ -43,6 +44,7 @@ async function refreshKycStatus() {
         kycState.submissionId = result.requestId;
         kycState.reason = result.reason || '';
         kycState.serviceError = '';
+        kycState.serviceChecked = true;
         const token = await auth.currentUser.getIdTokenResult();
         if (generation !== kycState.generation) return;
         kycState.isAdmin = token.claims.kycAdmin === true;
@@ -54,6 +56,7 @@ async function refreshKycStatus() {
         if (generation !== kycState.generation) return;
         kycState.status = 'unverified';
         kycState.serviceError = kycError(error);
+        kycState.serviceChecked = true;
     }
     if (state.loggedInUser) renderProfileKyc();
     if (document.getElementById('modal-kyc').style.display === 'flex') renderKycStep();
@@ -94,7 +97,8 @@ function closeKycModal() {
 function renderKycStep() {
     const statusOnly = ['approved', 'pending', 'uploading'].includes(kycState.status);
     const needsLogin = !auth?.currentUser || auth.currentUser.isAnonymous;
-    document.getElementById('kyc-form').hidden = needsLogin || statusOnly;
+    const unavailable = !kycState.serviceChecked || Boolean(kycState.serviceError);
+    document.getElementById('kyc-form').hidden = needsLogin || unavailable || statusOnly;
     document.querySelectorAll('[data-kyc-step]').forEach(el => { el.hidden = statusOnly || Number(el.dataset.kycStep) !== kycState.step; });
     document.querySelectorAll('.kyc-progress li').forEach((el, i) => {
         el.classList.toggle('current', i === kycState.step);
@@ -102,11 +106,11 @@ function renderKycStep() {
         el.setAttribute('aria-current', i === kycState.step ? 'step' : 'false');
     });
     const box = document.getElementById('kyc-status-message');
-    box.hidden = statusOnly || (!needsLogin && kycState.status !== 'rejected' && !kycState.serviceError);
-    box.textContent = needsLogin ? 'ต้องเข้าสู่ระบบด้วย Google หรือบัญชี Firebase ที่ยืนยันแล้วก่อนส่งเอกสาร กรุณาเข้าสู่ระบบก่อนเริ่มกรอกข้อมูล' : kycState.serviceError || ({ approved: 'ยืนยันตัวตนแล้ว • ตรวจสอบโดยผู้ดูแลระบบ', pending: 'ได้รับเอกสารแล้ว • กำลังรอผู้ดูแลตรวจสอบ คุณกลับมาเช็กสถานะได้ภายหลัง', uploading: 'กำลังรับเอกสาร กรุณาตรวจสอบสถานะอีกครั้ง', rejected: `กรุณาแก้ไขและส่งใหม่: ${kycState.reason}` })[kycState.status] || '';
-    document.getElementById('kyc-back').hidden = statusOnly || needsLogin || kycState.step === 0;
-    document.getElementById('kyc-next').hidden = statusOnly || needsLogin || kycState.step === 3;
-    document.getElementById('kyc-submit').hidden = statusOnly || needsLogin || kycState.step !== 3;
+    box.hidden = statusOnly || (!needsLogin && !unavailable && kycState.status !== 'rejected');
+    box.textContent = needsLogin ? 'ต้องเข้าสู่ระบบด้วย Google หรือบัญชี Firebase ที่ยืนยันแล้วก่อนส่งเอกสาร กรุณาเข้าสู่ระบบก่อนเริ่มกรอกข้อมูล' : !kycState.serviceChecked ? 'กำลังตรวจสอบว่าระบบรับเอกสารพร้อมใช้งาน…' : kycState.serviceError || ({ approved: 'ยืนยันตัวตนแล้ว • ตรวจสอบโดยผู้ดูแลระบบ', pending: 'ได้รับเอกสารแล้ว • กำลังรอผู้ดูแลตรวจสอบ คุณกลับมาเช็กสถานะได้ภายหลัง', uploading: 'กำลังรับเอกสาร กรุณาตรวจสอบสถานะอีกครั้ง', rejected: `กรุณาแก้ไขและส่งใหม่: ${kycState.reason}` })[kycState.status] || '';
+    document.getElementById('kyc-back').hidden = statusOnly || needsLogin || unavailable || kycState.step === 0;
+    document.getElementById('kyc-next').hidden = statusOnly || needsLogin || unavailable || kycState.step === 3;
+    document.getElementById('kyc-submit').hidden = statusOnly || needsLogin || unavailable || kycState.step !== 3;
     document.getElementById('kyc-login').hidden = statusOnly || !needsLogin;
     document.getElementById('kyc-submit').disabled = kycState.busy || Boolean(kycState.serviceError);
     document.getElementById('kyc-submit').textContent = kycState.busy ? 'กำลังส่งเอกสาร…' : 'ส่งยืนยันตัวตน';
@@ -115,7 +119,7 @@ function renderKycStep() {
     document.getElementById('kyc-step-count').textContent = statusOnly ? 'สถานะการยืนยันตัวตน' : `ขั้นตอน ${kycState.step + 1} / 4`;
     document.getElementById('kyc-status-refresh').hidden = needsLogin || (!statusOnly && !kycState.serviceError);
     document.getElementById('kyc-done').hidden = !statusOnly;
-    document.getElementById('kyc-footer-note').hidden = statusOnly || needsLogin || kycState.step > 0;
+    document.getElementById('kyc-footer-note').hidden = statusOnly || needsLogin || unavailable || kycState.step > 0;
     document.getElementById('kyc-result').hidden = !statusOnly;
     if (statusOnly) {
         const approved = kycState.status === 'approved';
@@ -127,7 +131,7 @@ function renderKycStep() {
 }
 function kycNext(direction) {
     if (kycState.busy || ['approved', 'pending', 'uploading'].includes(kycState.status)) return;
-    if (direction > 0 && (!auth?.currentUser || auth.currentUser.isAnonymous)) { renderKycStep(); return; }
+    if (direction > 0 && (!auth?.currentUser || auth.currentUser.isAnonymous || !kycState.serviceChecked || kycState.serviceError)) { renderKycStep(); return; }
     document.getElementById('kyc-error').textContent = '';
     if (direction > 0) {
         if (kycState.step === 0 && !document.getElementById('kyc-form').reportValidity()) return;
