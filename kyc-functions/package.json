@@ -4,5 +4,5 @@
   "main": "index.js",
   "engines": { "node": "22" },
   "scripts": { "test": "node --test validation.test.js" },
-  "dependencies": { "firebase-admin": "^13.0.0", "firebase-functions": "^6.0.0", "sharp": "^0.33.5" }
+  "dependencies": { "firebase-admin": "14.5.0", "firebase-functions": "7.4.0", "sharp": "0.35.5" }
 }
