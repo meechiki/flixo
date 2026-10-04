@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // KYC evidence is only accessed by the trusted backend via Admin SDK.
+    // This default bucket is not used by other client uploads in this repo.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
